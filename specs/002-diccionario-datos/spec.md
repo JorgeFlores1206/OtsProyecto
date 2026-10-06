@@ -7,7 +7,9 @@
 **Fecha de aprobación**: 2026-10-06
 **Fuentes**: Constitution v1.0.0, Spec 000, Spec 001 y decisiones proporcionadas para Spec 002
 
-## Enmienda posterior a aprobación
+## Enmiendas posteriores a aprobación
+
+### Enmienda 1 — Estado Activo/Inactivo de cliente
 
 - **Fecha de enmienda**: 2026-10-06.
 - **Cambio**: incorporación de `cliente.estado` y normalización de los atributos de `cliente` a
@@ -16,6 +18,18 @@
   clientes Activos/Inactivos.
 - **Impacto**: no modifica entidades, relaciones ni cardinalidades; formaliza la política
   Activo/Inactivo ya aprobada. Spec 002 mantiene su estado `APROBADA`.
+
+### Enmienda 2 — Metadatos técnicos de creación y anulación
+
+- **Fecha de enmienda**: 2026-10-06.
+- **Cambio**: incorporación de `orden_trabajo.idempotencia_creacion` como identificador técnico
+  durable y único de la operación de creación agregada, y de `orden_trabajo.anulado_en` como momento
+  efectivo de anulación. Se ratifica `terminado_en` como momento efectivo de finalización.
+- **Motivo**: formalizar la protección servidor/base de datos ante reintentos de creación y cerrar
+  temporalmente la última etapa productiva de una OT anulada.
+- **Impacto**: no agrega entidades, no altera relaciones ni cardinalidades y no modifica la
+  semántica empresarial de la OT. Amplía `orden_trabajo` únicamente con metadatos técnicos y de
+  trazabilidad; Spec 002 conserva el estado `APROBADA`.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -220,6 +234,13 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
   lógica consistente.
 - **DR-040**: El modelo DEBE conservar la hora de finalización para cerrar el tiempo del último
   sector, sin crear una entidad independiente solo para finalizar.
+- **DR-041**: La creación agregada de una OT DEBE quedar asociada a una clave técnica durable y
+  única `idempotencia_creacion`. Repetir la misma solicitud con la misma clave DEBE reconocer el
+  resultado ya procesado y NO DEBE crear otra OT. La clave no es el código de OT, no es un dato
+  empresarial y no se muestra como información funcional.
+- **DR-042**: Una transición a `ANULADO` DEBE registrar `anulado_en` atómicamente con el cambio de
+  estado, usando el momento confiable de la operación servidor/base de datos. El navegador NO DEBE
+  proporcionar como confiables el actor ni ese timestamp.
 
 ## COMPARACIÓN CON EL MODELO EXISTENTE
 
@@ -346,7 +367,9 @@ Finalidad: representar un trabajo de producción. PK: `id`.
 | `cantidad_paginas` | integer | Sí/null | Mayor que cero cuando existe |
 | `nombre_trabajo` | text | No/— | — |
 | `estado_ot_parametro_id` | integer | No/`PENDIENTE` | FK `parametro[ESTADO_OT]` |
+| `idempotencia_creacion` | uuid | No/clave estable de la operación | Único; metadato técnico no visible y distinto de `codigo_ot` |
 | `terminado_en` | timestamptz | Sí/null | Momento de finalización manual; solo aplica a `TERMINADO` |
+| `anulado_en` | timestamptz | Sí/null | Momento efectivo de anulación; obligatorio cuando el estado es `ANULADO` |
 | `creado_por_perfil_id` | integer | No/— | FK `perfil_usuario` |
 | `modificado_por_perfil_id` | integer | Sí/null | FK `perfil_usuario` |
 | `creado_en` | timestamptz | No/generado | Trazabilidad básica |
@@ -366,7 +389,11 @@ decidirán posteriormente sin alterar estas relaciones.
 - Al registrar su primer `INICIO`: `EN_PROCESO`.
 - Durante avances y devoluciones: permanece `EN_PROCESO`.
 - Al ejecutar la acción manual de finalización: `TERMINADO` y `terminado_en` conserva el momento.
-- Al anular: `ANULADO`; no se permiten nuevos movimientos productivos.
+- Al anular: `ANULADO` y `anulado_en` conserva atómicamente el momento efectivo; no se permiten
+  nuevos movimientos productivos.
+- Mientras la OT no esté `TERMINADO`, `terminado_en` es null; mientras no esté `ANULADO`,
+  `anulado_en` normalmente es null. Los timestamps los establece la operación segura, no el
+  navegador.
 - Llegar a PRODUCCIÓN no implica finalizar. El estado y el sector actual son conceptos distintos.
 
 La autorización técnica y las transiciones excepcionales se definirán funcionalmente; esta Spec
@@ -614,8 +641,9 @@ marcas.
 
 Para el sector actual de una OT en proceso, el tiempo transcurrido es la hora actual menos la entrada
 del último movimiento. Cuando se marca `TERMINADO`, `terminado_en` cierra el intervalo del último
-sector. Si una OT visita varias veces el mismo sector, cada permanencia se calcula por separado y el
-total del sector puede obtenerse sumando sus intervalos. `duracion_sector` no se almacena.
+sector; cuando se anula, `anulado_en` cierra ese intervalo. Si una OT visita varias veces el mismo
+sector, cada permanencia se calcula por separado y el total del sector puede obtenerse sumando sus
+intervalos. La duración continúa siendo derivada y `duracion_sector` no se almacena.
 
 ### `auditoria_evento` y `auditoria_cambio`
 
@@ -745,8 +773,10 @@ contrato estructural aprobado por esta Spec.
 | DP-004 | Definir el período de retención de la auditoría completa. | **NO BLOQUEA SPEC 002** |
 | DP-005 | Definir la representación física de `valor_anterior` y `valor_nuevo` sin cambiar el modelo evento–cambios. | **NO BLOQUEA SPEC 002** |
 | DP-006 | Definir índices físicos, estrategia de paginación y optimización a partir de volúmenes medidos. | **NO BLOQUEA SPEC 002** |
-| DP-007 | Definir el cierre temporal del último sector ante transiciones excepcionales distintas de `TERMINADO`, conservando el historial. | **NO BLOQUEA SPEC 002** |
 | DP-008 | Evaluar si corresponde migrar total o parcialmente la base anterior con aproximadamente 19.000 OT; no existe obligación de migrarla. | **NO BLOQUEA SPEC 002, SPEC 003 NI EL DESARROLLO** |
+
+La anterior `DP-007` quedó **RESUELTA** mediante la enmienda del 2026-10-06: `anulado_en` cierra el
+último intervalo productivo de una OT anulada sin persistir una duración.
 
 ## OBSERVACIONES Y CORRECCIONES DEL MODELO
 
@@ -765,12 +795,14 @@ contrato estructural aprobado por esta Spec.
 | OBS-011 | RESUELTA | usuario/responsable | `perfil_usuario` es actor autenticado; `responsable_sector` es persona física sin credenciales. |
 | OBS-012 | RESUELTA | ALMACÉN | Se conserva como sector empresarial fuera del flujo productivo. |
 | OBS-013 | RESUELTA | auditoría | Movimiento funcional y auditoría de control son modelos diferentes y coexistentes. |
+| OBS-014 | RESUELTA | idempotencia/anulación | `idempotencia_creacion` evita duplicados de creación y `anulado_en` cierra la última permanencia anulada; ambas son propiedades técnicas de `orden_trabajo`. |
 
 ## Trazabilidad de reglas críticas
 
 | Regla | Modelo | Fuente |
 |---|---|---|
 | Código OT correlativo y automático | `orden_trabajo.codigo_ot` | Decisión aprobada Spec 002 |
+| Creación idempotente sin duplicar OT | `orden_trabajo.idempotencia_creacion` único y no visible | Enmienda aprobada del 2026-10-06 |
 | Cliente Activo/Inactivo sin perder historia | `cliente.estado`; relación 1:N sin duplicar el estado en `orden_trabajo` | Enmienda aprobada del 2026-10-06 |
 | 0–3 pisos; consecutivos cuando existen | `ot_detalle`, unicidad y validación del conjunto | Decisión aprobada Spec 002 |
 | Tipo, material y gramaje separados | `tipo_material` 1:N `material` 1:N `gramaje` | Decisión aprobada Spec 002 |
@@ -779,6 +811,7 @@ contrato estructural aprobado por esta Spec.
 | Dimensiones atómicas en centímetros | Seis componentes X/Y numéricos | Decisión aprobada Spec 002 |
 | Acabados múltiples y opcionales | `ot_acabado` | Decisión aprobada Spec 002 |
 | Estado separado de sector | `estado_ot_parametro_id` frente al último `movimiento_ot` | Reglas de flujo proporcionadas |
+| Cierre de la última permanencia terminal | `terminado_en` para `TERMINADO`; `anulado_en` para `ANULADO`; duración derivada | Enmienda aprobada del 2026-10-06 |
 | Inicio variable, saltos y devoluciones | `movimiento_ot` | Reglas de flujo proporcionadas |
 | Responsable físico separado del usuario | `responsable_sector` frente a `perfil_usuario` | Reglas operativas proporcionadas |
 | Sector y responsable actuales derivados | Último `movimiento_ot` | Regla de normalización proporcionada |

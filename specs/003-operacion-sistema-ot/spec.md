@@ -2,11 +2,46 @@
 
 **Directorio**: `specs/003-operacion-sistema-ot`
 **Creada**: 2026-10-06
-**Estado**: BORRADOR PARA REVISIÓN HUMANA
+**Estado**: LISTA PARA PLANIFICACIÓN
 **Tipo**: Especificación funcional del MVP
 **Fuentes**: Constitution v1.0.0, Spec 000, Spec 001, Spec 002 APROBADA y reglas funcionales proporcionadas para Spec 003
-**Contrato estructural**: Spec 002 — Diccionario de Datos, aprobada el 2026-10-06
+**Contrato estructural**: Spec 002 — Diccionario de Datos, aprobada el 2026-10-06 con enmiendas
+controladas de la misma fecha
 **Input**: Definir la operación funcional del sistema desde la creación de una OT hasta su finalización o anulación, sin redefinir el modelo de datos.
+
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: ¿La devolución de una OT debe registrar motivo? → A: No se registra motivo de devolución en el MVP.
+- Q: ¿Quién selecciona al responsable del sector destino? → A: La persona autorizada que confirma
+  el movimiento selecciona un responsable Activo del sector destino antes de confirmarlo.
+- Q: ¿Cómo acceden y recuperan el acceso las personas usuarias? → A: Mediante correo y contraseña,
+  con recuperación de contraseña por correo; las cuentas son creadas por ADMINISTRADOR y no existe
+  auto-registro público.
+- Q: ¿Qué información cubre la auditoría visible? → A: Operaciones `CREATE`, `UPDATE` y `DELETE`
+  sobre OT, pisos, acabados, clientes, catálogos, sectores, responsables, perfiles y asignaciones de
+  rol; los movimientos se consultan principalmente como historial funcional, sin duplicación
+  innecesaria.
+- Q: ¿Qué edición, anulación y eliminación se permite según el estado de la OT? → A: `PENDIENTE`
+  admite edición administrativa, anulación y eliminación solo sin movimientos; `EN_PROCESO` admite
+  correcciones auditadas y anulación, pero no eliminación; `TERMINADO` y `ANULADO` admiten consulta
+  y correcciones administrativas excepcionales auditadas, sin eliminación ni movimientos. Una OT
+  terminada no vuelve automáticamente a `EN_PROCESO` y la anulación no exige motivo en el MVP.
+
+## Enmienda técnica controlada — 2026-10-06
+
+La enmienda posterior a aprobación de Spec 002 formaliza dos metadatos de `orden_trabajo` sin
+cambiar el comportamiento empresarial clarificado:
+
+- `idempotencia_creacion`: clave técnica durable, única y no visible que identifica una operación
+  de creación agregada. La misma solicitud repetida con la misma clave devuelve el resultado ya
+  procesado y no crea otra OT.
+- `anulado_en`: momento confiable establecido por servidor/base de datos al cambiar atómicamente a
+  `ANULADO`; cierra la última permanencia productiva sin persistir `duracion_sector`.
+
+`terminado_en` ya estaba aprobado y continúa cerrando la última permanencia cuando la OT pasa
+atómicamente a `TERMINADO`. Esta enmienda no reabre las decisiones funcionales de Clarify.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -32,6 +67,9 @@ tres pisos válidos y con estado inicial `PENDIENTE`, sin iniciar todavía el fl
    aprobadas en Spec 002.
 4. **Given** una OT con acabados, **When** se confirma, **Then** no se repite ningún acabado y los
    acabados especiales incluyen una posición válida.
+5. **Given** una creación cuya respuesta se perdió o fue reenviada, **When** se repite exactamente la
+   misma solicitud con su clave de idempotencia estable, **Then** el sistema devuelve un resultado
+   coherente de la operación ya procesada y no crea una segunda OT.
 
 ---
 
@@ -53,6 +91,10 @@ su sector, puede buscar, filtrar, paginar y abrir el detalle necesario para trab
    recibe un subconjunto navegable sin cargar todas las OT simultáneamente.
 3. **Given** una OT visible para el USUARIO, **When** abre su detalle, **Then** puede consultar la
    información general, pisos, acabados, estado, sector y responsable actuales y recorrido.
+4. **Given** una cuenta activa creada por ADMINISTRADOR, **When** la persona introduce correo y
+   contraseña válidos, **Then** accede conforme al rol y sector de su perfil.
+5. **Given** una persona que olvidó su contraseña, **When** solicita recuperarla, **Then** el sistema
+   ofrece recuperación por correo sin habilitar auto-registro público.
 
 ---
 
@@ -77,6 +119,8 @@ sobrescribe el historial.
    `EN_PROCESO`.
 3. **Given** un destino o responsable inválido, **When** se intenta confirmar el envío, **Then** no
    se registra el movimiento y se explica la corrección necesaria.
+4. **Given** un destino permitido, **When** la persona autorizada aún no seleccionó un responsable
+   Activo perteneciente al destino, **Then** el movimiento permanece sin confirmar.
 
 ---
 
@@ -97,8 +141,8 @@ ciclo; cada transición queda como una fila histórica independiente.
    se agrega una `DEVOLUCION` sin editar ni eliminar movimientos anteriores.
 2. **Given** una OT devuelta que vuelve a avanzar, **When** completa nuevamente parte del recorrido,
    **Then** cada visita aparece por separado y sus tiempos pueden reconstruirse.
-3. **Given** una devolución sin motivo, **When** la obligatoriedad del motivo aún no ha sido
-   aprobada, **Then** esta Spec no la rechaza únicamente por esa ausencia.
+3. **Given** una devolución válida sin motivo, **When** el usuario la confirma, **Then** el sistema
+   registra el movimiento sin exigir ni almacenar un motivo en el MVP.
 
 ---
 
@@ -130,21 +174,29 @@ ubicación operativa errónea para mantener información útil sin reescribir la
 
 **Why this priority**: Las excepciones reales requieren control administrativo y trazabilidad.
 
-**Independent Test**: Un ADMINISTRADOR puede editar información permitida, anular o eliminar según
-reglas y corregir el recorrido agregando un movimiento válido; los movimientos y eventos de
-auditoría anteriores permanecen inmutables.
+**Independent Test**: Un ADMINISTRADOR puede aplicar la edición, anulación o eliminación permitida
+por el estado de la OT y corregir el recorrido agregando un movimiento válido; toda corrección
+aplicable queda auditada y la historia anterior permanece inmutable.
 
 **Acceptance Scenarios**:
 
-1. **Given** una OT con información corregible, **When** el ADMINISTRADOR la edita, **Then** se
-   guardan los nuevos valores y la auditoría permite identificar actor, momento y cambios.
+1. **Given** una OT `PENDIENTE`, **When** el ADMINISTRADOR edita sus datos dentro de las reglas de
+   integridad, **Then** se guardan los nuevos valores y la auditoría identifica actor, momento y
+   cambios.
 2. **Given** una OT `EN_PROCESO` ubicada en un sector incorrecto, **When** el ADMINISTRADOR corrige
    el recorrido, **Then** agrega un movimiento hacia un sector productivo válido y no modifica ni
    elimina el recorrido previo.
-3. **Given** una OT que debe anularse, **When** el ADMINISTRADOR confirma la anulación aplicable,
-   **Then** queda `ANULADO` y no admite movimientos productivos nuevos.
-4. **Given** una OT eliminable, **When** el ADMINISTRADOR confirma la eliminación, **Then** se
-   eliminan sus dependencias operativas conforme a Spec 002 y permanece su auditoría.
+3. **Given** una OT `PENDIENTE` o `EN_PROCESO`, **When** el ADMINISTRADOR confirma su anulación sin
+   indicar un motivo, **Then** queda `ANULADO`, registra `anulado_en`, cierra la permanencia
+   productiva abierta cuando existe y no admite movimientos productivos nuevos.
+4. **Given** una OT `PENDIENTE` sin movimientos productivos, **When** el ADMINISTRADOR confirma la
+   eliminación, **Then** se eliminan sus dependencias operativas conforme a Spec 002 y permanece su
+   auditoría.
+5. **Given** una OT `TERMINADO` o `ANULADO` con un error administrativo real, **When** el
+   ADMINISTRADOR realiza una corrección excepcional, **Then** los valores cambian con auditoría
+   completa, sin generar movimientos ni cambiar automáticamente el estado terminal.
+6. **Given** una OT que ya inició su recorrido productivo, **When** se intenta eliminarla
+   físicamente, **Then** la operación se rechaza cualquiera sea su estado actual.
 
 ---
 
@@ -178,8 +230,9 @@ sector para conocer dónde estuvo, quién intervino y cuánto duró cada visita.
 
 **Why this priority**: El seguimiento convierte los movimientos en información operativa útil.
 
-**Independent Test**: A partir de los movimientos y la finalización se muestran origen, destino,
-responsable, actor, momento, tipo y duración derivada de cada visita, incluidas visitas repetidas.
+**Independent Test**: A partir de los movimientos y de los momentos terminales se muestran origen,
+destino, responsable, actor, momento, tipo y duración derivada de cada visita, incluidas visitas
+repetidas.
 
 **Acceptance Scenarios**:
 
@@ -189,6 +242,8 @@ responsable, actor, momento, tipo y duración derivada de cada visita, incluidas
    deriva desde su última entrada hasta el momento de consulta.
 3. **Given** una OT terminada, **When** se consulta la última etapa, **Then** su duración termina en
    el momento de finalización y no sigue aumentando.
+4. **Given** una OT anulada después de iniciar su recorrido, **When** se consulta la última etapa,
+   **Then** su duración termina en `anulado_en` y no sigue aumentando.
 
 ---
 
@@ -199,17 +254,20 @@ eliminó información y qué valores cambiaron, sin confundirla con el recorrido
 
 **Why this priority**: La auditoría respalda control, investigación y responsabilidad administrativa.
 
-**Independent Test**: Un ADMINISTRADOR puede consultar eventos `CREATE`, `UPDATE` y `DELETE` con
+**Independent Test**: Un ADMINISTRADOR puede consultar eventos `CREATE`, `UPDATE` y `DELETE` de OT,
+pisos, acabados, clientes, catálogos, sectores, responsables, perfiles y asignaciones de rol con
 actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarlos ni eliminarlos.
 
 **Acceptance Scenarios**:
 
 1. **Given** una edición auditable, **When** el ADMINISTRADOR consulta su evento, **Then** identifica
    actor, fecha/hora, atributo y valores anterior y nuevo.
-2. **Given** una OT eliminada operacionalmente, **When** se consulta la auditoría, **Then** el evento
-   y sus cambios continúan disponibles aunque el registro operativo ya no exista.
+2. **Given** una OT `PENDIENTE` sin movimientos eliminada por un ADMINISTRADOR, **When** se consulta
+   la auditoría, **Then** el evento y sus cambios continúan disponibles aunque el registro operativo
+   ya no exista.
 3. **Given** un movimiento productivo, **When** se consultan recorrido y auditoría, **Then** cada
-   vista conserva su finalidad y ninguna reemplaza a la otra.
+   vista conserva su finalidad; no se duplica el movimiento únicamente para reproducir el recorrido
+   en auditoría, pero los cambios auditables que la operación cause permanecen registrados.
 
 ### Edge Cases
 
@@ -229,16 +287,31 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 - Una OT `TERMINADO` no puede avanzar ni devolverse por el flujo normal.
 - Un avance puede saltar uno o más sectores permitidos sin crear movimientos ficticios intermedios.
 - Una devolución agrega historia y nunca sobrescribe el avance que la antecedió.
+- Una devolución válida puede confirmarse sin motivo; el MVP no solicita ni almacena ese dato.
 - Una OT puede repetir un ciclo completo o parcial; cada visita conserva su propio responsable y
   duración.
 - Un USUARIO no puede mover una OT cuyo sector actual no coincide con el sector de su perfil.
 - Un USUARIO no puede eliminar una OT ni usar funciones administrativas ocultas o directas.
+- Un movimiento no se confirma hasta que quien lo ejecuta selecciona un responsable Activo del
+  sector destino; la llegada no queda pendiente de una asignación posterior por el receptor.
 - Una corrección de recorrido por ADMINISTRADOR agrega un movimiento válido; no altera movimientos
   históricos.
 - ALMACÉN no puede elegirse como destino productivo aunque exista y esté activo como área.
 - Un responsable de un sector distinto al destino no puede confirmarse para el movimiento.
-- Un reintento de creación, edición, movimiento, devolución, finalización, anulación o eliminación
-  no debe producir duplicados ni repetir efectos sin verificar el resultado previo.
+- Una OT `PENDIENTE` con al menos un movimiento productivo no puede eliminarse físicamente; si no
+  tiene movimientos, solo el ADMINISTRADOR puede eliminarla.
+- Una OT `EN_PROCESO`, `TERMINADO` o `ANULADO` no puede eliminarse físicamente.
+- Una corrección administrativa excepcional sobre una OT `TERMINADO` o `ANULADO` conserva su
+  estado terminal, no genera un movimiento productivo y queda completamente auditada.
+- La anulación válida de una OT `PENDIENTE` o `EN_PROCESO` puede confirmarse sin indicar motivo.
+- Al anular una OT que tiene una etapa productiva abierta, `anulado_en` cierra esa permanencia; su
+  duración no continúa creciendo y no se almacena una columna `duracion_sector`.
+- La consulta de auditoría distingue el historial funcional del recorrido; no duplica un movimiento
+  únicamente para mostrarlo como auditoría, pero sí conserva los cambios auditables producidos por
+  la operación.
+- Un reintento de creación con la misma `idempotencia_creacion` no debe crear otra OT; edición,
+  movimiento, devolución, finalización, anulación o eliminación tampoco deben repetir efectos sin
+  verificar estado, locks y precondiciones aprobadas.
 - Si la sesión deja de ser válida durante una operación, no se confirma un resultado ambiguo y se
   orienta al usuario para recuperar el acceso de forma segura.
 
@@ -260,9 +333,10 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 
 - **FR-005**: Toda operación del sistema DEBE requerir una identidad autenticada y un perfil activo
   autorizado, salvo la presentación necesaria para iniciar el acceso.
-- **FR-006**: El `ADMINISTRADOR` DEBE poder ver todas las OT; crear, editar, corregir, anular y
-  eliminar OT; moverlas y corregir recorridos; administrar usuarios, asignaciones de rol, clientes,
-  catálogos, sectores y responsables; y consultar recorrido y auditoría.
+- **FR-006**: El `ADMINISTRADOR` DEBE poder ver todas las OT; crear, editar, corregir, anular y,
+  únicamente cuando FR-073 lo permite, eliminar OT; moverlas y corregir recorridos; administrar
+  usuarios, asignaciones de rol, clientes, catálogos, sectores y responsables; y consultar recorrido
+  y auditoría.
 - **FR-007**: El `ADMINISTRADOR` NO DEBE poder modificar ni eliminar eventos o cambios históricos de
   auditoría desde la operación normal.
 - **FR-008**: Cada `USUARIO` DEBE pertenecer a un sector operativo.
@@ -288,8 +362,9 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
   `USUARIO` operativo activo por sector en un momento determinado.
 - **FR-016**: Un perfil inactivo NO DEBE iniciar nuevas operaciones y DEBE permanecer identificable
   en movimientos y auditorías históricas.
-- **FR-017**: El método exacto de acceso, la recuperación de contraseña y la política detallada de
-  sesiones NO quedan fijados por esta Spec y deberán respetar las restricciones de Specs 000 y 001.
+- **FR-017**: El acceso DEBE realizarse mediante correo y contraseña y la recuperación de contraseña
+  DEBE ofrecerse por correo. La sesión DEBE respetar la continuidad y terminación funcionales de
+  Spec 001; sus tiempos y configuración técnica corresponden a Plan.
 
 ### Administración de datos maestros
 
@@ -319,8 +394,10 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 - **FR-028**: La creación DEBE exigir un cliente Activo, un tipo de trabajo activo y un nombre de
   trabajo; la OT nueva DEBE iniciar en `PENDIENTE`. Un cliente que se inactive posteriormente DEBE
   continuar visible en las OT históricas y su inactivación NO DEBE bloquear su consulta.
-- **FR-029**: El `ADMINISTRADOR` DEBE poder editar los datos autorizados de una OT respetando estado,
-  integridad, referencias históricas y auditoría.
+- **FR-029**: El `ADMINISTRADOR` DEBE poder editar libremente una OT `PENDIENTE` dentro de las reglas
+  de integridad; en `EN_PROCESO` DEBE limitarse a correcciones auditadas; y en `TERMINADO` o
+  `ANULADO` solo DEBE realizar correcciones administrativas excepcionales por errores reales,
+  siempre auditadas y sin cambiar automáticamente el estado terminal.
 - **FR-030**: Toda edición auditable DEBE conservar actor, fecha/hora y valores relevantes anteriores
   y nuevos conforme al modelo aprobado.
 
@@ -363,9 +440,10 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
   debe establecer `TERMINADO` y conservar el momento de cierre.
 - **FR-048**: El flujo normal NO DEBE retroceder una OT desde `TERMINADO` o `ANULADO` ni generar
   movimientos productivos nuevos para esos estados.
-- **FR-049**: Solo el `ADMINISTRADOR` DEBE anular una OT; la regla inicial permite anular una OT
-  `PENDIENTE` o `EN_PROCESO`. Cualquier excepción desde un estado terminal queda como candidato de
-  Clarify.
+- **FR-049**: Solo el `ADMINISTRADOR` DEBE anular una OT `PENDIENTE` o `EN_PROCESO`; el MVP NO DEBE
+  exigir motivo de anulación. Una OT `TERMINADO` o `ANULADO` NO DEBE anularse nuevamente ni reabrirse
+  mediante esta acción. El cambio a `ANULADO` y el registro servidor de `anulado_en` DEBEN ser
+  atómicos; ese momento cierra la última permanencia productiva cuando existe.
 
 ### Sectores, responsables y movimientos
 
@@ -378,9 +456,9 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
   destino, actor autenticado, fecha/hora y tipo; NO DEBE sobrescribir movimientos anteriores.
 - **FR-053**: Para confirmar un movimiento, el destino DEBE estar activo, participar en el flujo y
   ser diferente del origen; el responsable DEBE estar activo y pertenecer al destino.
-- **FR-054**: El actor autorizado que confirma el movimiento DEBE seleccionar en esa misma operación
-  un responsable activo del sector destino, de modo compatible con la obligatoriedad estructural de
-  Spec 002.
+- **FR-054**: El actor autorizado que confirma el movimiento DEBE seleccionar antes de confirmarlo,
+  en esa misma operación, un responsable Activo del sector destino; no existe una llegada sin
+  responsable pendiente de asignación posterior por el sector receptor.
 - **FR-055**: El `USUARIO` solo DEBE mover una OT cuando su sector coincide con el sector actual de
   la OT; el `ADMINISTRADOR` puede moverla o corregir su recorrido dentro de las reglas de integridad.
 - **FR-056**: Desde DISEÑO se DEBE permitir avanzar a PRENSA, PRE_ACABADO o PRODUCCIÓN cuando el
@@ -390,8 +468,8 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 - **FR-059**: Desde PRODUCCIÓN se DEBE permitir finalizar y devolver a PRE_ACABADO, PRENSA o DISEÑO.
 - **FR-060**: La matriz anterior DEBE funcionar como definición inicial administrable y NO DEBE
   convertirse en una ruta universal que obligue a pasar por todos los sectores.
-- **FR-061**: Una devolución DEBE conservar el historial previo y permitir ciclos repetidos; esta
-  Spec NO exige todavía un motivo de devolución.
+- **FR-061**: Una devolución DEBE conservar el historial previo y permitir ciclos repetidos; el MVP
+  NO DEBE solicitar ni almacenar un motivo de devolución.
 - **FR-062**: La corrección de recorrido por un `ADMINISTRADOR` DEBE conservar los hechos previos y
   agregar el movimiento válido necesario para restablecer la ubicación actual; NO DEBE editar ni
   eliminar movimientos históricos.
@@ -416,23 +494,31 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
   confundirse con el estado de la OT.
 - **FR-071**: El tiempo de cada visita a un sector DEBE derivarse desde su entrada hasta el siguiente
   movimiento; para la visita actual, hasta el momento de consulta; para la última etapa terminada,
-  hasta el momento de finalización.
+  hasta `terminado_en`; y para la última etapa anulada, hasta `anulado_en`.
 - **FR-072**: Las visitas repetidas a un mismo sector DEBEN mostrarse por separado y PUEDEN sumarse
   para presentar un total derivado, sin almacenar una duración duplicada.
 
 ### Eliminación y auditoría visible
 
-- **FR-073**: Solo el `ADMINISTRADOR` DEBE eliminar una OT y la acción DEBE requerir confirmación
-  explícita de su consecuencia.
-- **FR-074**: La eliminación DEBE tratar las dependencias operativas según el contrato de Spec 002,
-  generar la auditoría correspondiente y NO eliminar el historial de auditoría.
+- **FR-073**: Solo el `ADMINISTRADOR` DEBE eliminar físicamente una OT `PENDIENTE` sin movimientos
+  productivos, previa confirmación explícita. Una OT que tenga movimientos o cuyo estado sea
+  `EN_PROCESO`, `TERMINADO` o `ANULADO` NO DEBE eliminarse físicamente.
+- **FR-074**: La eliminación permitida DEBE tratar las dependencias operativas según el contrato de
+  Spec 002, generar la auditoría correspondiente y NO eliminar el historial de auditoría; el detalle
+  técnico de las acciones referenciales corresponde a Plan.
 - **FR-075**: El `ADMINISTRADOR` DEBE poder consultar auditoría de operaciones `CREATE`, `UPDATE` y
-  `DELETE` con actor, fecha/hora, atributo, valor anterior y valor nuevo.
+  `DELETE` sobre OT, pisos, acabados, clientes, catálogos, sectores, responsables, perfiles y
+  asignaciones de rol, con actor, fecha/hora, atributo, valor anterior y valor nuevo.
 - **FR-076**: Los eventos y cambios de auditoría DEBEN ser inmutables desde la operación normal.
 - **FR-077**: `movimiento_ot` DEBE representar el historial funcional del recorrido y la auditoría
-  DEBE representar cambios de control; una vista NO DEBE reemplazar ni reinterpretar a la otra.
-- **FR-078**: Los reintentos de operaciones DEBEN verificar el resultado previo y NO DEBEN duplicar
-  OT, pisos, acabados, movimientos, finalizaciones ni eventos de auditoría.
+  DEBE representar cambios de control; una vista NO DEBE reemplazar ni reinterpretar a la otra. Un
+  movimiento NO DEBE duplicarse en auditoría únicamente para reproducir el recorrido, aunque los
+  cambios auditables que produzca sobre las entidades cubiertas DEBEN conservarse.
+- **FR-078**: La creación agregada DEBE usar una `idempotencia_creacion` técnica, durable, estable y
+  única para esa operación; repetir exactamente la misma solicitud con la misma clave DEBE devolver
+  un resultado coherente ya procesado y NO DEBE duplicar OT, pisos ni acabados. Los movimientos,
+  finalizaciones, anulaciones y demás escrituras DEBEN impedir efectos repetidos mediante sus
+  estados esperados, locks y precondiciones técnicas, sin depender únicamente de la interfaz.
 
 ### Key Entities *(referenciadas desde Spec 002)*
 
@@ -456,42 +542,47 @@ Spec 003 no redefine entidades. Utiliza conceptualmente las 16 entidades lógica
 
 | Situación actual | Acciones normales permitidas | Acciones no permitidas |
 |---|---|---|
-| `PENDIENTE`, sin movimiento | `INICIO` hacia DISEÑO, PRENSA, PRE_ACABADO o PRODUCCIÓN por ADMINISTRADOR | Inicio hacia ALMACÉN |
+| `PENDIENTE`, sin movimiento | Editar; anular; eliminar con confirmación; `INICIO` hacia DISEÑO, PRENSA, PRE_ACABADO o PRODUCCIÓN por ADMINISTRADOR | Inicio hacia ALMACÉN |
 | DISEÑO | Avanzar a PRENSA, PRE_ACABADO o PRODUCCIÓN | Devolución normal sin sector anterior |
 | PRENSA | Avanzar a PRE_ACABADO o PRODUCCIÓN; devolver a DISEÑO | Avanzar hacia ALMACÉN |
 | PRE_ACABADO | Avanzar a PRODUCCIÓN; devolver a PRENSA o DISEÑO | Avanzar hacia ALMACÉN |
 | PRODUCCIÓN | Marcar terminado; devolver a PRE_ACABADO, PRENSA o DISEÑO | Finalización automática por llegada |
-| `TERMINADO` | Consulta e historial | Avance o devolución normal |
-| `ANULADO` | Consulta e historial | Inicio, avance, devolución o finalización |
+| `TERMINADO` | Consulta e historial; corrección administrativa excepcional y auditada | Eliminación; avance, devolución o reapertura automática |
+| `ANULADO` | Consulta e historial; corrección administrativa excepcional y auditada | Eliminación; inicio, avance, devolución o finalización |
 
-### Candidatos documentados para Clarify
+Las OT `EN_PROCESO` admiten correcciones administrativas auditadas y anulación, pero no eliminación
+física. Las correcciones excepcionales en estados terminales no modifican movimientos históricos ni
+cambian automáticamente el estado.
 
-Estos puntos no se resuelven ni bloquean la creación de Spec 003. Deben revisarse antes de cualquier
-Plan cuando afecten el comportamiento a implementar:
+### Clasificación posterior a Clarify
 
-1. Determinar si el motivo de devolución será obligatorio, opcional o inexistente y cómo se
-   validará sin cambiar silenciosamente el modelo aprobado.
-2. Confirmar excepciones de la matriz de destinos y posibles reglas especiales por tipo de trabajo,
-   manteniendo el flujo flexible.
-3. Definir desde qué estados puede anularse una OT y si existe alguna excepción administrativa para
-   estados terminales.
-4. Definir método exacto de acceso, recuperación de contraseña y política detallada de sesiones.
-5. Definir qué datos adicionales, si alguno, necesita `perfil_usuario`.
-6. Definir en el futuro una fórmula empresarial de `total_pliegos`; hasta entonces continúa siendo
-   un entero positivo registrado.
-7. Delimitar cobertura adicional y retención de auditoría.
-8. Evaluar si trabajos repetidos recomendarán rutas anteriores o si se permitirá copiar una ruta;
-   esta Spec no automatiza esa posibilidad.
-9. Precisar cualquier corrección histórica que exceda agregar un movimiento compensatorio, porque
-   los movimientos existentes son inmutables.
-10. Confirmar si la selección del responsable destino la realiza quien confirma el movimiento, como
-    exige el flujo definido aquí, o si el USUARIO receptor debe seleccionarlo después de la llegada.
-    La segunda alternativa requeriría revisar primero cómo representarla sin contradecir la
-    obligatoriedad de `movimiento_ot.responsable_sector_id` en Spec 002.
-11. Precisar las acciones referenciales de la eliminación operacional: Spec 002 exige conservar la
-    auditoría, pero mantiene pendiente el tratamiento físico exacto de las demás dependencias. El
-    resultado funcional de esta Spec es que la OT y sus dependencias operativas dejan de estar
-    disponibles, mientras la auditoría permanece.
+No quedan decisiones funcionales bloqueantes para planificar el MVP. Los asuntos restantes se
+clasifican así para evitar convertir decisiones técnicas o mejoras futuras en ambigüedades del
+alcance actual.
+
+**Puede resolverse en Plan**:
+
+- mecanismos de autorización, protección de operaciones y aplicación técnica de permisos;
+- tiempos, renovación, revocación y configuración técnica de las sesiones, respetando Spec 001;
+- acciones referenciales concretas de la eliminación permitida, preservando siempre la auditoría;
+- representación técnica de valores anteriores y nuevos en auditoría;
+- detalles de implementación de locks, precondiciones e idempotencia, respetando los metadatos y
+  contratos ya aprobados;
+- estrategia técnica de búsqueda, filtros, paginación y capacidad;
+- interacción y diseño visual de formularios, acciones, listados, recorridos y auditoría.
+
+**Puede dejarse para futuro**:
+
+- excepciones adicionales de destinos o reglas especiales por tipo de trabajo; mientras no se
+  aprueben, rige la matriz funcional inicial;
+- atributos adicionales de `perfil_usuario`; el MVP usa los aprobados en Spec 002;
+- fórmula automática de `total_pliegos`; durante el MVP continúa como entero positivo registrado;
+- período de retención de auditoría e historial; debe definirse antes de una política operativa de
+  purga y nunca habilita su modificación desde la operación normal;
+- recomendación o copia de rutas para trabajos repetidos;
+- correcciones históricas del recorrido que excedan agregar un movimiento compensatorio; los
+  movimientos existentes permanecen inmutables;
+- ampliaciones futuras de la cobertura de auditoría más allá de FR-075.
 
 ### Futuro y fuera del alcance del MVP actual
 
@@ -522,9 +613,10 @@ También quedan fuera del alcance de esta Spec:
 - **SC-002**: Una prueba funcional completa puede llevar una OT desde creación `PENDIENTE`, pasando
   por `INICIO`, avances o devoluciones flexibles, hasta `TERMINADO`, sin confundir estado y sector.
 - **SC-003**: El 100 % de los movimientos de una OT de prueba, incluidos saltos y ciclos repetidos,
-  aparece en orden con origen, destino, responsable, actor, momento y tipo.
+  aparece en orden con origen, destino, responsable, actor, momento y tipo; ninguno puede
+  confirmarse sin que el actor seleccione antes un responsable Activo del destino.
 - **SC-004**: Los tiempos de todas las visitas de una OT de prueba pueden reconstruirse únicamente
-  con movimientos y finalización, sin una duración almacenada separadamente.
+  con movimientos, `terminado_en` o `anulado_en`, sin una duración almacenada separadamente.
 - **SC-005**: Ningún USUARIO de prueba puede eliminar OT, administrar datos maestros o mover una OT
   cuyo sector actual no coincide con el suyo.
 - **SC-006**: El 100 % de los valores maestros inactivos probados, incluidos los clientes, desaparece
@@ -535,14 +627,24 @@ También quedan fuera del alcance de esta Spec:
   100 % de los intentos normales de mover OT `TERMINADO` o `ANULADO` es rechazado.
 - **SC-009**: El listado nunca requiere cargar el conjunto completo y permite encontrar una OT por
   búsqueda o filtros y abrir su detalle desde resultados paginados.
-- **SC-010**: Para cada operación auditable de prueba, el ADMINISTRADOR puede consultar actor,
-  fecha/hora, operación y cambios sin poder modificar ni eliminar la auditoría.
+- **SC-010**: Para cada operación auditable de prueba sobre OT, pisos, acabados, clientes,
+  catálogos, sectores, responsables, perfiles o asignaciones de rol, el ADMINISTRADOR puede consultar
+  actor, fecha/hora, operación y cambios sin poder modificar ni eliminar la auditoría.
 - **SC-011**: Una revisión documental encuentra cero redefiniciones de las 16 entidades de Spec 002
   y cero confusiones entre usuario autenticado, responsable físico, movimiento y auditoría.
 - **SC-012**: Toda referencia a la migración de la base anterior la clasifica como futuro fuera del
   MVP y cero requisitos del desarrollo dependen de completarla.
 - **SC-013**: La revisión encuentra cero SQL, migraciones, RLS o RPC concretos, modificaciones de
   Supabase, Plan, Tasks, Analyze, Implement o código.
+- **SC-014**: Una prueba de acceso válida usa correo y contraseña, una prueba de recuperación ofrece
+  el flujo por correo y ningún recorrido permite auto-registro público.
+- **SC-015**: El 100 % de los intentos de eliminar una OT con movimientos o en estado
+  `EN_PROCESO`, `TERMINADO` o `ANULADO` es rechazado; una OT `PENDIENTE` sin movimientos solo puede
+  eliminarla un ADMINISTRADOR y su auditoría permanece.
+- **SC-016**: El 100 % de las correcciones administrativas excepcionales probadas sobre OT
+  `TERMINADO` o `ANULADO` queda auditado, conserva el estado terminal y no genera movimientos
+  productivos; anular una OT válida no exige motivo en el MVP, registra `anulado_en` y cierra su
+  última permanencia productiva.
 
 ## Assumptions
 

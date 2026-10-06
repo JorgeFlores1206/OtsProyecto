@@ -53,7 +53,8 @@
 ## Notes
 
 - **32 de 32 controles aprobados** después de reevaluar el contenido real de la especificación; la
-  aclaración de migración y la enmienda de `cliente` también fueron verificadas.
+  aclaración de migración y las enmiendas de `cliente` y metadatos técnicos de OT también fueron
+  verificadas.
 - El modelo final contiene 16 entidades: `cliente`, `orden_trabajo`, `ot_detalle`,
   `tipo_material`, `material`, `gramaje`, `maquina`, `parametro`, `ot_acabado`, `rol`,
   `perfil_usuario`, `sector`, `responsable_sector`, `movimiento_ot`, `auditoria_evento` y
@@ -63,6 +64,12 @@
   un código empresarial adicional.
 - Los clientes Inactivos no se ofrecen para nuevas OT, permanecen visibles en OT históricas y no se
   eliminan físicamente cuando tienen historial. La cardinalidad cliente 1:N orden_trabajo no cambia.
+- Enmienda posterior a aprobación del 2026-10-06: `orden_trabajo.idempotencia_creacion` identifica
+  de forma durable y única una operación de creación para impedir OT duplicadas, y
+  `orden_trabajo.anulado_en` registra el momento confiable de anulación y cierra la última
+  permanencia productiva. No se agregan entidades ni cambian cardinalidades.
+- `terminado_en` ya estaba formalizado y continúa cerrando la última permanencia de una OT
+  `TERMINADO`; `duracion_sector` sigue siendo un valor derivado y no se persiste.
 - Se corrigieron decisiones desactualizadas: `tipo_material` vuelve a formar parte del modelo;
   `cantidad` es integer; una OT admite 0..3 pisos; `gramaje` pertenece a `material` y no existe
   `gramaje_id` en `ot_detalle`; el muestrario es obligatorio por piso; las dimensiones usan
@@ -81,4 +88,5 @@
   desarrollo del nuevo sistema.
 - Estado correcto: `APROBADA` con enmienda controlada; la aprobación humana fue otorgada el
   2026-10-06 y no se reabrió el modelo completo.
-- La autorización actual permite crear Spec 003, pero no autoriza Plan, Tasks ni implementación.
+- La presente reevaluación solo valida la consistencia documental de la enmienda; no ejecuta
+  implementación ni modifica una base de datos.
