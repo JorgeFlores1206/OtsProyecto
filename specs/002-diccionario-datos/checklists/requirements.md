@@ -1,8 +1,9 @@
 # Specification Quality Checklist: Spec 002 — Diccionario de Datos
 
-**Purpose**: Validar el modelo lógico antes de aprobarlo  
-**Created**: 2026-10-02  
-**Reevaluated**: 2026-10-05  
+**Purpose**: Validar el modelo lógico completo antes de su aprobación humana
+**Created**: 2026-10-02
+**Reevaluated**: 2026-10-06
+**Approved**: 2026-10-06
 **Feature**: [Spec 002 — Diccionario de Datos](../spec.md)
 
 ## Content Quality
@@ -30,23 +31,54 @@
 - [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
+## Validación específica del Diccionario de Datos
+
+- [x] El inventario final contiene 16 entidades lógicas; `cliente` incluye nombre, contacto y estado Activo/Inactivo sin código empresarial ni NIT
+- [x] `tipo_material`, `material` y `gramaje` conservan sus responsabilidades separadas
+- [x] `ot_detalle` conserva 0..3 pisos, montaje, dimensiones X/Y en centímetros y muestrario obligatorio
+- [x] `sector` documenta códigos, orden, participación en flujo, estado y catálogo inicial
+- [x] ALMACÉN existe con `participa_flujo = false` y no es destino productivo
+- [x] `responsable_sector` permanece separado de `perfil_usuario` y de Supabase Auth
+- [x] `perfil_usuario.sector_id` aplica obligatoriamente a USUARIO y opcionalmente a ADMINISTRADOR
+- [x] `movimiento_ot` permite inicio variable, saltos, devoluciones y ciclos sin sobrescribir historia
+- [x] Sector actual, responsable actual y tiempos son derivados sin fuentes duplicadas
+- [x] Estado de OT y sector actual están modelados como conceptos diferentes
+- [x] `movimiento_ot` y auditoría tienen finalidades diferentes y coexistentes
+- [x] Las nuevas cardinalidades aparecen en el mapa de relaciones
+- [x] Las decisiones del flujo pendientes están clasificadas para Spec 003
+- [x] No quedan decisiones estructurales bloqueantes
+- [x] El estado es `APROBADA` por decisión humana del 2026-10-06
+- [x] El documento no contiene SQL, migraciones, Plan, Tasks ni implementación
+
 ## Notes
 
-- **16 de 16 controles aprobados**; se reevaluaron todos los controles.
-- `armado` quedó definido como la cantidad de diseños distintos del montaje: `integer`, obligatorio
-  en `ot_detalle` y mayor que cero.
-- `formato` quedó definido como la cantidad total de posiciones: `integer`, obligatorio en
-  `ot_detalle`, mayor que cero y mayor o igual que `armado`.
-- Ambos son atributos separados. No se aprobó ni se incorporó una regla de divisibilidad.
-- `tamano_final` quedó normalizado como `tamano_final_x` y `tamano_final_y`; ambos son `numeric`,
-  positivos, admiten decimales y son obligatorios conjuntamente cuando corresponde registrar el
-  tamaño final.
-- `tamano_corte` quedó normalizado como `tamano_corte_x` y `tamano_corte_y`; ambos son `numeric`,
-  positivos, admiten decimales y son obligatorios conjuntamente cuando corresponde registrar el
-  tamaño de corte.
-- Los tamaños no se almacenan como texto combinado. La unidad dimensional permanece pendiente sin
-  asumir cm o mm y sin agregar una columna; esta decisión no bloquea la estructura X/Y.
-- No hay `[NEEDS CLARIFICATION]`; las 11 decisiones pendientes están enumeradas y clasificadas.
-- Resultado de pendientes: 0 bloquean aprobación y 11 no bloquean aprobación.
-- Estado correcto: `LISTA PARA REVISIÓN Y APROBACIÓN`; la aprobación final continúa siendo humana.
-- Este checklist no autoriza avanzar a Plan, Tasks ni implementación.
+- **32 de 32 controles aprobados** después de reevaluar el contenido real de la especificación; la
+  aclaración de migración y la enmienda de `cliente` también fueron verificadas.
+- El modelo final contiene 16 entidades: `cliente`, `orden_trabajo`, `ot_detalle`,
+  `tipo_material`, `material`, `gramaje`, `maquina`, `parametro`, `ot_acabado`, `rol`,
+  `perfil_usuario`, `sector`, `responsable_sector`, `movimiento_ot`, `auditoria_evento` y
+  `auditoria_cambio`.
+- Enmienda posterior a aprobación del 2026-10-06: `cliente` conserva `id`, `nombre`, `telefono`,
+  `correo` y `estado boolean` con Activo como valor conceptual predeterminado; no contiene `nit` ni
+  un código empresarial adicional.
+- Los clientes Inactivos no se ofrecen para nuevas OT, permanecen visibles en OT históricas y no se
+  eliminan físicamente cuando tienen historial. La cardinalidad cliente 1:N orden_trabajo no cambia.
+- Se corrigieron decisiones desactualizadas: `tipo_material` vuelve a formar parte del modelo;
+  `cantidad` es integer; una OT admite 0..3 pisos; `gramaje` pertenece a `material` y no existe
+  `gramaje_id` en `ot_detalle`; el muestrario es obligatorio por piso; las dimensiones usan
+  centímetros; el nombre de máquina es único; y cuatro acabados requieren posición.
+- El recorrido no es rígido: admite sector inicial variable, saltos, devoluciones y repetición de
+  ciclos mediante filas históricas de `movimiento_ot`.
+- `sector_actual`, `responsable_actual` y `duracion_sector` no se almacenan; se derivan del último
+  movimiento y de sus marcas de tiempo.
+- ALMACÉN se conserva como sector empresarial con `participa_flujo = false` y queda fuera de los
+  destinos productivos.
+- Las seis decisiones pendientes del flujo están clasificadas como decisiones funcionales para
+  Spec 003 y no bloquean Spec 002.
+- Resultado de pendientes estructurales: **0 bloquean la aprobación**.
+- La base anterior con aproximadamente 19.000 OT se mantiene como referencia de volumen; migrarla
+  total o parcialmente es una posibilidad futura a evaluar y no bloquea Spec 002, Spec 003 ni el
+  desarrollo del nuevo sistema.
+- Estado correcto: `APROBADA` con enmienda controlada; la aprobación humana fue otorgada el
+  2026-10-06 y no se reabrió el modelo completo.
+- La autorización actual permite crear Spec 003, pero no autoriza Plan, Tasks ni implementación.
