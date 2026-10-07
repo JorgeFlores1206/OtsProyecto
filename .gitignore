@@ -20,3 +20,7 @@ supabase/functions/.env
 Thumbs.db
 .vscode/
 .idea/
+
+# Spec Kit / agentes (estado local por máquina)
+.specify/integrations/.cache/
+.claude/settings.local.json
