@@ -2,7 +2,7 @@
 
 **Directorio**: `specs/003-operacion-sistema-ot`
 **Creada**: 2026-10-06
-**Estado**: LISTA PARA PLANIFICACIÓN
+**Estado**: PLANIFICADA — lista para validación preimplementación
 **Tipo**: Especificación funcional del MVP
 **Fuentes**: Constitution v1.0.0, Spec 000, Spec 001, Spec 002 APROBADA y reglas funcionales proporcionadas para Spec 003
 **Contrato estructural**: Spec 002 — Diccionario de Datos, aprobada el 2026-10-06 con enmiendas
@@ -80,7 +80,7 @@ procesar mi sector para concentrarme en el trabajo que me corresponde.
 
 **Why this priority**: La consulta por sector es la entrada principal a la operación cotidiana.
 
-**Independent Test**: Un USUARIO autenticado ve principalmente OT cuyo sector actual coincide con
+**Independent Test**: Un USUARIO autenticado ve exclusivamente OT cuyo sector actual coincide con
 su sector, puede buscar, filtrar, paginar y abrir el detalle necesario para trabajar.
 
 **Acceptance Scenarios**:
@@ -331,8 +331,10 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 
 ### Acceso, roles y permisos
 
-- **FR-005**: Toda operación del sistema DEBE requerir una identidad autenticada y un perfil activo
-  autorizado, salvo la presentación necesaria para iniciar el acceso.
+- **FR-005**: Toda operación de negocio DEBE requerir una identidad autenticada y un perfil activo
+  autorizado. Las únicas operaciones sin sesión permitidas son presentar el acceso, autenticar por
+  correo/contraseña y solicitar o completar la recuperación de contraseña; ninguna de ellas habilita
+  auto-registro ni acceso a datos del negocio.
 - **FR-006**: El `ADMINISTRADOR` DEBE poder ver todas las OT; crear, editar, corregir, anular y,
   únicamente cuando FR-073 lo permite, eliminar OT; moverlas y corregir recorridos; administrar
   usuarios, asignaciones de rol, clientes, catálogos, sectores y responsables; y consultar recorrido
@@ -479,7 +481,8 @@ actor, momento, atributo, valor anterior y valor nuevo, pero no puede modificarl
 ### Consulta, seguimiento e historial
 
 - **FR-064**: El `ADMINISTRADOR` DEBE consultar todas las OT y el `USUARIO` DEBE consultar
-  principalmente las OT de su sector actual.
+  exclusivamente las OT de su sector actual; ninguna búsqueda, filtro, paginación o acceso directo
+  al detalle DEBE revelar una OT de otro sector.
 - **FR-065**: Los listados DEBEN soportar búsqueda por código, cliente o nombre de trabajo, filtros
   por estado, sector, responsable y fecha, paginación y apertura de detalle.
 - **FR-066**: El listado DEBE permitir reconocer como mínimo código OT, cliente, nombre del trabajo,
@@ -584,7 +587,7 @@ alcance actual.
   movimientos existentes permanecen inmutables;
 - ampliaciones futuras de la cobertura de auditoría más allá de FR-075.
 
-### Futuro y fuera del alcance del MVP actual
+### Futuro y fuera del alcance funcional del MVP actual
 
 Existe una base de datos anterior con aproximadamente 19.000 OT históricas. Migrarla total o
 parcialmente es una **posibilidad o requisito futuro a evaluar**, no una obligación aprobada. La
@@ -592,12 +595,9 @@ migración histórica no forma parte del alcance principal de Spec 003 y no bloq
 ni el desarrollo del nuevo sistema. La referencia de volumen se conserva para búsqueda, paginación
 y validaciones de capacidad.
 
-También quedan fuera del alcance de esta Spec:
+También quedan fuera del alcance funcional del MVP:
 
-- SQL, tablas físicas, migraciones, triggers, índices, RLS o RPC concretos;
-- modificaciones de Supabase o scripts contra la base anterior;
-- componentes, CSS, pantallas finales, arquitectura física o código;
-- Plan, Tasks, Analyze o Implement;
+- scripts o modificaciones contra la base anterior y la migración de sus datos históricos;
 - auto-registro público y nuevos roles;
 - reportes o estadísticas avanzadas;
 - cálculo automático definitivo de `total_pliegos`;
@@ -634,8 +634,9 @@ También quedan fuera del alcance de esta Spec:
   y cero confusiones entre usuario autenticado, responsable físico, movimiento y auditoría.
 - **SC-012**: Toda referencia a la migración de la base anterior la clasifica como futuro fuera del
   MVP y cero requisitos del desarrollo dependen de completarla.
-- **SC-013**: La revisión encuentra cero SQL, migraciones, RLS o RPC concretos, modificaciones de
-  Supabase, Plan, Tasks, Analyze, Implement o código.
+- **SC-013**: Un entorno local o de prueba nuevo puede provisionar exactamente un primer
+  `ADMINISTRADOR` mediante el procedimiento privilegiado documentado, sin habilitar auto-registro,
+  exponer secretos al frontend ni dejar una ruta pública de bootstrap activa.
 - **SC-014**: Una prueba de acceso válida usa correo y contraseña, una prueba de recuperación ofrece
   el flujo por correo y ningún recorrido permite auto-registro público.
 - **SC-015**: El 100 % de los intentos de eliminar una OT con movimientos o en estado

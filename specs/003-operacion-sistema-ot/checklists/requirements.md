@@ -2,7 +2,7 @@
 
 **Purpose**: Validar completitud y calidad de la especificación funcional antes de revisión humana
 **Created**: 2026-10-06
-**Revalidated**: 2026-10-06, después de Clarify y de la enmienda técnica controlada
+**Revalidated**: 2026-10-07, después de Clarify, la enmienda técnica controlada y la limpieza preimplementación
 **Feature**: [Spec 003 — Operación funcional del sistema de Órdenes de Trabajo](../spec.md)
 
 ## Content Quality
@@ -56,4 +56,5 @@
   resueltos; las acciones referenciales concretas de una eliminación permitida se reservan para
   Plan sin alterar las restricciones funcionales.
 - La migración de la base anterior queda fuera del MVP y no bloquea el desarrollo.
-- La Spec no contiene SQL, migraciones, RLS o RPC concretos, Plan, Tasks, Analyze, Implement ni código.
+- Los límites funcionales ya no confunden el alcance del producto con las fases o artefactos del flujo
+  Spec Kit; Plan y Tasks conservan la autoridad sobre los detalles de implementación.

@@ -1,6 +1,6 @@
 # Quickstart Validation Guide — Spec 003
 
-Este documento describe cómo validar la implementación futura. No instala dependencias, no modifica
+Este documento describe cómo validar la implementación. No instala dependencias, no modifica
 Supabase y no sustituye Tasks.
 
 ## Prerequisites
@@ -10,7 +10,7 @@ Supabase y no sustituye Tasks.
 - Navegadores modernos Chrome/Edge y acceso a Safari real para smoke de aceptación.
 - Variables locales con URL/clave publicable de un entorno no productivo; nunca secret/service-role
   en `frontend/.env`.
-- Dependencias fijadas y lockfile ya creados por la futura fase de implementación.
+- Dependencias fijadas y lockfile creados por la Fase 1 antes de ejecutar la secuencia.
 
 ## Planned local validation sequence
 

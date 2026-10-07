@@ -1,9 +1,9 @@
 # Implementation Plan: Spec 003 — Operación funcional del sistema de Órdenes de Trabajo
 
-**Branch**: `003-operacion-sistema-ot` | **Date**: 2026-10-06 | **Spec**: [spec.md](./spec.md)
+**Branch**: `main` | **Date**: 2026-10-06 | **Spec**: [spec.md](./spec.md)
 **Plan Status**: COMPLETO — aprobado y sincronizado con Tasks
 
-**Input**: Spec 003 `LISTA PARA PLANIFICACIÓN`, Constitution v1.0.0, Specs 000–002 y las decisiones
+**Input**: Spec 003 planificada, Constitution v1.0.0, Specs 000–002 y las decisiones
 técnicas autorizadas para este Plan.
 
 ## Summary
@@ -200,7 +200,7 @@ specs/003-operacion-sistema-ot/
 ├── quickstart.md
 ├── contracts/
 │   └── interfaces.md
-└── tasks.md                 # solo será creado por speckit-tasks, no por este Plan
+└── tasks.md                 # generado y sincronizado con este Plan
 ```
 
 ### Source Code (repository root)
@@ -212,6 +212,7 @@ frontend/
 │   ├── features/
 │   │   ├── auth/
 │   │   ├── ot/
+│   │   ├── clientes/
 │   │   ├── catalogos/
 │   │   ├── sectores/
 │   │   ├── usuarios/

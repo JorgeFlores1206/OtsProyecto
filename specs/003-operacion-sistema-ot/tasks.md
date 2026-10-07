@@ -18,15 +18,15 @@
 **Purpose**: preparar React/Vite/JavaScript, Supabase local y herramientas de calidad sin implementar reglas del dominio.  
 **Traceability**: PL Technical Context/Project Structure; Research §§1–3, 14–16; Spec 000; Spec 001.
 
-- [ ] T001 Inicializar la SPA React + Vite en JavaScript con Node 22.12+ y npm, fijar scripts y dependencias aprobadas (`react`, `react-dom`, `react-router-dom`, `@supabase/supabase-js`) en `frontend/package.json`, `frontend/package-lock.json`, `frontend/index.html`, `frontend/src/main.jsx` y `frontend/src/App.jsx` (PL Project Structure; Research §§1–2)
-- [ ] T002 [P] Configurar ESLint y convenciones JavaScript/JSX sin TypeScript ni Redux en `frontend/eslint.config.js` y `frontend/.gitignore` (PL Simplicity; Constitution VII/XV)
-- [ ] T003 [P] Crear plantillas de variables públicas y locales seguras con `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, sin secretos, en `frontend/.env.example` y `.gitignore` (Research §3; CT General rules)
-- [ ] T004 Inicializar la configuración versionada de Supabase local, rutas de migraciones/seeds y política de desarrollo no productivo en `supabase/config.toml` y `supabase/.gitignore` (PL Local Development; Quickstart)
-- [ ] T005 [P] Crear la estructura por features y componentes compartidos mediante archivos índice mínimos en `frontend/src/features/auth/index.js`, `frontend/src/features/ot/index.js`, `frontend/src/features/clientes/index.js`, `frontend/src/features/catalogos/index.js`, `frontend/src/features/sectores/index.js`, `frontend/src/features/usuarios/index.js`, `frontend/src/features/auditoria/index.js` y `frontend/src/shared/index.js` (PL Project Structure; Research §2)
-- [ ] T006 Configurar Vitest, jsdom, Testing Library y user-event con comandos reproducibles en `frontend/vitest.config.js` y `frontend/tests/setup.js` (Research §14; Constitution XIV)
-- [ ] T007 [P] Configurar Playwright con proyectos Chromium, Edge y WebKit, perfiles desktop/Android/iPhone/iPad y axe en `frontend/playwright.config.js` y `frontend/tests/e2e/fixtures/a11y.js` (PL Responsive/Accessibility; Research §§14–15)
-- [ ] T008 [P] Preparar el arnés pgTAP/Supabase local y helpers de identidades/claims de prueba en `supabase/tests/database/000_test_helpers.sql` (PL Testing; CT Access matrix)
-- [ ] T009 Crear la navegación declarativa inicial, layout protegido y páginas placeholder sin lógica de negocio en `frontend/src/app/router.jsx`, `frontend/src/app/AppProviders.jsx` y `frontend/src/app/layouts/AppLayout.jsx` (PL Frontend Architecture; Research §2)
+- [x] T001 Inicializar la SPA React + Vite en JavaScript con Node 22.12+ y npm; fijar scripts, dependencias de ejecución (`react`, `react-dom`, `react-router-dom`, `@supabase/supabase-js`) y dependencias de desarrollo requeridas por T002/T006/T007 (Vite, ESLint para React, Vitest, jsdom, Testing Library/user-event, Playwright y axe) en `frontend/package.json`, `frontend/package-lock.json`, `frontend/index.html`, `frontend/src/main.jsx` y `frontend/src/App.jsx` (PL Project Structure; Research §§1–2, 14–15)
+- [x] T002 [P] Configurar ESLint y convenciones JavaScript/JSX sin TypeScript ni Redux en `frontend/eslint.config.js` y `frontend/.gitignore` (PL Simplicity; Constitution VII/XV)
+- [x] T003 [P] Crear plantillas de variables públicas y locales seguras con `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`, sin secretos, en `frontend/.env.example` y `.gitignore` (Research §3; CT General rules)
+- [x] T004 Inicializar la configuración versionada de Supabase local, rutas de migraciones/seeds y política de desarrollo no productivo en `supabase/config.toml` y `supabase/.gitignore` (PL Local Development; Quickstart)
+- [x] T005 [P] Crear la estructura por features y componentes compartidos mediante archivos índice mínimos en `frontend/src/features/auth/index.js`, `frontend/src/features/ot/index.js`, `frontend/src/features/clientes/index.js`, `frontend/src/features/catalogos/index.js`, `frontend/src/features/sectores/index.js`, `frontend/src/features/usuarios/index.js`, `frontend/src/features/auditoria/index.js` y `frontend/src/shared/index.js` (PL Project Structure; Research §2)
+- [x] T006 Configurar Vitest, jsdom, Testing Library y user-event con comandos reproducibles en `frontend/vitest.config.js` y `frontend/tests/setup.js` (Research §14; Constitution XIV)
+- [x] T007 [P] Configurar Playwright con proyectos Chromium, Edge y WebKit, perfiles desktop/Android/iPhone/iPad y axe en `frontend/playwright.config.js` y `frontend/tests/e2e/fixtures/a11y.js` (PL Responsive/Accessibility; Research §§14–15)
+- [x] T008 [P] Preparar el arnés pgTAP/Supabase local y helpers de identidades/claims de prueba en `supabase/tests/database/000_test_helpers.sql` (PL Testing; CT Access matrix)
+- [x] T009 Crear la navegación declarativa inicial, layout protegido y páginas placeholder sin lógica de negocio en `frontend/src/app/router.jsx`, `frontend/src/app/AppProviders.jsx` y `frontend/src/app/layouts/AppLayout.jsx` (PL Frontend Architecture; Research §2)
 
 **Checkpoint**: herramientas, estructura y entorno local listos; no hay lógica de dominio implementada.
 
@@ -39,15 +39,21 @@
 
 > **CRITICAL**: ninguna historia comienza hasta completar esta fase y aprobar sus pruebas de esquema/RLS.
 
+> **Orden TDD obligatorio de la fase**: después de T010–T011 se escriben T027–T028 y se comprueba
+> que fallan por capacidades ausentes; luego se ejecutan T012–T026 y finalmente se repiten T027–T028
+> hasta aprobar. La numeración estable conserva la trazabilidad y no define por sí sola el orden.
+
 - [x] T010 Registrar como enmienda estructural controlada la clave técnica durable `idempotencia_creacion` de `orden_trabajo` y el instante `anulado_en`, con justificación, impacto, preservación de 16 entidades y aprobación de esta instrucción, en `specs/002-diccionario-datos/spec.md`, `specs/002-diccionario-datos/checklists/requirements.md` y `specs/003-operacion-sistema-ot/spec.md` (FR-001, FR-049, FR-071, FR-078; Constitution I/XVI)
 - [x] T011 Sincronizar la representación, constraints, contratos y riesgos resueltos de `idempotencia_creacion` y `anulado_en` en `specs/003-operacion-sistema-ot/plan.md`, `specs/003-operacion-sistema-ot/data-model.md`, `specs/003-operacion-sistema-ot/contracts/interfaces.md`, `specs/003-operacion-sistema-ot/research.md` y `specs/003-operacion-sistema-ot/quickstart.md` antes de escribir la migración (CT crear_ot/anular_ot; DM State Transitions)
+- [ ] T027 Escribir primero pgTAP para las 16 tablas, constraints, relaciones, seeds, auditoría base e imposibilidad de DML histórico, y comprobar el fallo inicial por esquema ausente, en `supabase/tests/database/010_schema_integrity.test.sql` (FR-001, FR-019–021, FR-031–043, FR-076; SC-003, SC-007, SC-010)
+- [ ] T028 Escribir primero pgTAP negativo para RLS/grants de las 16 tablas usando anon, USUARIO de sector, otro sector, perfil inactivo y ADMINISTRADOR, y comprobar el fallo inicial por políticas ausentes, en `supabase/tests/database/020_rls_baseline.test.sql` (FR-005–012, FR-016; SC-005)
 - [ ] T012 Crear esquemas privado/público, extensiones estrictamente necesarias, secuencia del correlativo y helpers de contexto autenticado con `search_path` seguro en `supabase/migrations/202610060001_base_security.sql` (PL Security; Research §§7, 9)
 - [ ] T013 Crear `cliente`, `tipo_material`, `material`, `gramaje`, `maquina`, `parametro`, `rol`, `sector` y `responsable_sector` con PK, FK, UNIQUE, CHECK, NOT NULL, defaults y RESTRICT del contrato aprobado en `supabase/migrations/202610060002_master_entities.sql` (DM Entities 1, 4–8, 10, 12–13)
 - [ ] T014 Crear `perfil_usuario`, `orden_trabajo`, `ot_detalle` y `ot_acabado`, incluyendo correlativo inmutable, metadatos autorizados, pares X/Y, pisos 0..3 y cascadas selectivas en `supabase/migrations/202610060003_ot_access_entities.sql` (DM Entities 2–3, 9, 11; FR-025, FR-031–042)
 - [ ] T015 Crear `movimiento_ot`, `auditoria_evento` y `auditoria_cambio` con historial append-only, JSONB y referencias que preserven auditoría en `supabase/migrations/202610060004_history_entities.sql` (DM Entities 14–16; FR-052, FR-075–077)
 - [ ] T016 Implementar triggers/constraints diferibles para consecutividad de pisos, grupo de parámetros, material–gramaje, acabado–posición, perfil–sector y timestamps inmutables en `supabase/migrations/202610060005_integrity_triggers.sql` (DM Cross-row Enforcement; FR-015, FR-031–041)
 - [ ] T017 Crear índices iniciales de FK, correlativo, cursor `(fecha_ot,id)`, movimiento más reciente, maestros activos y auditoría según consultas reales en `supabase/migrations/202610060006_base_indexes.sql` (DM Read Models; PL Pagination)
-- [ ] T018 Cargar seeds idempotentes únicamente para roles, estados, sectores/participación, colorimetría, impresión, muestrario, tipos de trabajo y acabados aprobados en `supabase/seed.sql` (DM Initial Data; FR-003, FR-022, FR-035–036, FR-041, FR-043)
+- [ ] T018 Cargar seeds idempotentes únicamente para roles, estados, sectores/participación, colorimetría, impresión, muestrario, tipos de trabajo y acabados aprobados en `supabase/seed.sql`; crear y documentar en `supabase/scripts/bootstrap-local-admin.ps1` y `docs/admin-bootstrap.md` el procedimiento privilegiado, auditable y exclusivo de local/prueba para provisionar el primer ADMINISTRADOR sin auto-registro ni secretos versionados (DM Initial Data; FR-003, FR-013–016, FR-022, FR-035–036, FR-041, FR-043; SC-013)
 - [ ] T019 Implementar el trigger genérico de auditoría transaccional para OT, pisos, acabados, clientes, catálogos, sectores, responsables, perfiles y rol, excluyendo secretos y movimiento como duplicado funcional, en `supabase/migrations/202610060007_audit_framework.sql` (FR-030, FR-075–077; Research §12)
 - [ ] T020 Implementar helpers privados, grants mínimos y RLS para clientes/catálogos/materiales/sectores/responsables/perfiles, con lectura histórica e inmutabilidad de códigos usados, en `supabase/migrations/202610060008_master_profile_rls.sql` (FR-005–020; CT Access matrix)
 - [ ] T021 Implementar RLS y grants para OT, pisos, acabados y movimiento con visibilidad ADMINISTRADOR/sector actual y DML crítico solo por RPC en `supabase/migrations/202610060009_ot_movement_rls.sql` (FR-006, FR-009–012, FR-055; CT Access matrix)
@@ -56,8 +62,6 @@
 - [ ] T024 Implementar `AuthProvider`, carga de perfil/rol/sector activo, logout y guards por autenticación/rol en `frontend/src/features/auth/AuthProvider.jsx`, `frontend/src/features/auth/authService.js` y `frontend/src/app/guards/ProtectedRoute.jsx` (FR-005, FR-008, FR-016–017)
 - [ ] T025 [P] Implementar taxonomía central de errores, correlation ID, redacción de datos sensibles y feedback accesible en `frontend/src/shared/errors/errorMap.js`, `frontend/src/shared/errors/operationContext.js` y `frontend/src/shared/components/OperationFeedback.jsx` (PL Observability; CT Error contract)
 - [ ] T026 [P] Crear tokens verde pino/blanco/neutros, reset semántico, foco visible y layout mobile-first compartido en `frontend/src/styles/tokens.css`, `frontend/src/styles/global.css` y `frontend/src/app/layouts/AppLayout.css` (Constitution III/IX; WCAG 2.2 AA objective)
-- [ ] T027 Escribir pgTAP para las 16 tablas, constraints, relaciones, seeds, auditoría base e imposibilidad de DML histórico en `supabase/tests/database/010_schema_integrity.test.sql` (FR-001, FR-019–021, FR-031–043, FR-076; SC-003, SC-007, SC-010)
-- [ ] T028 Escribir pgTAP negativo para RLS/grants de las 16 tablas usando anon, USUARIO de sector, otro sector, perfil inactivo y ADMINISTRADOR en `supabase/tests/database/020_rls_baseline.test.sql` (FR-005–012, FR-016; SC-005)
 
 **Checkpoint**: 16 entidades, seeds, auditoría base, Auth y RLS verificables están listos; secretos no llegan al navegador.
 
@@ -67,7 +71,7 @@
 
 **Goal**: crear atómicamente una OT `PENDIENTE` con correlativo, 0..3 pisos y acabados válidos sin duplicarla ante reintentos.  
 **Independent Test**: un ADMINISTRADOR crea OT con 0, 1, 2 y 3 pisos; se rechazan huecos/valores inválidos y repetir la misma clave devuelve la misma OT.  
-**Traceability**: US1; FR-024–042, FR-078; SC-006–008; DM OT aggregate; CT `crear_ot`.
+**Traceability**: US1; FR-024–042, FR-078; SC-006–007; DM OT aggregate; CT `crear_ot`.
 
 ### Tests for User Story 1 — escribir primero y comprobar fallo
 
@@ -121,7 +125,7 @@
 
 **Goal**: registrar INICIO/AVANCE atómico con destino y responsable válidos, sin dobles movimientos.  
 **Independent Test**: se inicia una OT en cualquier sector productivo o se avanza/salta según matriz; actor, origen, tipo y estado son derivados y un reintento stale no duplica.  
-**Traceability**: US3; FR-044–045, FR-050–060, FR-063, FR-078; SC-002–005; CT `mover_ot`.
+**Traceability**: US3; FR-044–045, FR-050–060, FR-063, FR-078; SC-002–003, SC-005; CT `mover_ot`.
 
 ### Tests for User Story 3 — escribir primero y comprobar fallo
 
@@ -147,7 +151,7 @@
 
 **Goal**: devolver a sectores anteriores y preservar cada visita/ciclo sin registrar motivo.  
 **Independent Test**: PRODUCCION→PRENSA→PRE_ACABADO→PRODUCCION crea visitas separadas, no altera movimientos y no solicita motivo.  
-**Traceability**: US4; FR-051–061, FR-069, FR-072, FR-078; SC-002–004; CT `mover_ot`.
+**Traceability**: US4; FR-051–061, FR-069, FR-072, FR-078; SC-002–003; CT `mover_ot`.
 
 ### Tests for User Story 4 — escribir primero y comprobar fallo
 
@@ -316,7 +320,7 @@
 ### Phase dependencies
 
 1. **Phase 1 — Setup**: inicia inmediatamente.
-2. **Phase 2 — Foundational**: depende de Phase 1; T010→T011 debe completarse antes de T012–T022. Bloquea todas las historias.
+2. **Phase 2 — Foundational**: depende de Phase 1; T010→T011→T027/T028 (fallo esperado) precede T012–T026 y T027/T028 se repiten al cierre hasta aprobar. Bloquea todas las historias.
 3. **US1–US9**: dependen de Phase 2. El orden recomendado respeta el recorrido del MVP: US1 → US2 → US3 → US4 → US5 → US6 → US7 → US8 → US9.
 4. **Phase 12**: depende de todas las historias seleccionadas; T113 precede T114, T117 precede la validación CI de T122 y T121 no bloquea desarrollo pero sí producción.
 
@@ -354,7 +358,7 @@ US1..US9 → Validación integral → Preparación (no despliegue) de producció
 ## Parallel Opportunities
 
 - En Setup, T002/T003/T005/T007/T008 pueden ejecutarse en paralelo después de T001 cuando no toquen el mismo archivo.
-- En Foundation, T023/T025/T026 pueden avanzar en paralelo después de la configuración; T027/T028 se escriben en archivos distintos, pero se ejecutan tras migraciones/RLS.
+- En Foundation, T027/T028 se escriben en paralelo antes de las migraciones; tras comprobar su fallo esperado, T023/T025/T026 pueden avanzar en paralelo donde no compartan archivos y las suites se repiten al cierre.
 - Las tareas de pruebas `[P]` de cada historia pueden escribirse en paralelo antes de implementar.
 - Tras Foundation, US1, US2 y US7 pueden desarrollarse en paralelo; US3 puede usar fixtures sin esperar la UI de US7.
 - US8 y US9 pueden implementar sus lectores en paralelo cuando existan los hechos/vistas base.
