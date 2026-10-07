@@ -1,42 +1,57 @@
 <!--
 Sync Impact Report
-- Version change: plantilla sin versión -> 1.0.0
-- Modified principles: plantilla genérica -> 17 principios aprobados de RosaBetaniaOts
-- Added sections: Propósito; I-XVII; metadatos del proyecto; flujo documental inicial
-- Removed sections: placeholders y comentarios de ejemplo de la plantilla
-- Templates requiring updates: no evaluadas ni modificadas por restricción explícita de alcance
-- Follow-up TODOs: ninguno
+- Version change: 1.0.0 -> 1.1.0
+- Bump rationale: MINOR. Se agrega un principio nuevo (XVIII) y se amplían IV y VIII; no se elimina
+  ni redefine de forma incompatible ningún principio existente.
+- Modified principles:
+  - IV. Alcance controlado del MVP: se agrega "Fases del proyecto" (MVP = Fase 1).
+  - VIII. Arquitectura y separación de responsabilidades: se agrega "Entregables de la Fase 1".
+- Added sections: XVIII. Entregables por fases (Fase 1 backend + frontend; Fase 2 MCP o CLI para IA)
+- Removed sections: ninguna
+- Templates requiring updates: ninguna modificada (alcance limitado a la Constitution)
+  - .specify/templates/plan-template.md: revisar que la estructura de proyecto admita backend/ y
+    frontend/ como entregables separados. ⚠ pendiente de revisión
+- Follow-up TODOs (conflictos a resolver según XVI y XVII):
+  - Spec 000: contradice XVIII ("no incluirá inicialmente un servidor backend tradicional separado",
+    despliegue solo de frontend, decisión pendiente 6). Requiere enmienda que defina tecnología,
+    despliegue y autenticación del backend.
+  - Spec 003 plan.md/tasks.md: asumen frontend conectado directamente a Supabase
+    (VITE_SUPABASE_* , solo frontend/). Requiere replanificación tras enmendar Spec 000.
+  - Spec 001: verificar requisitos no funcionales afectados (latencia, disponibilidad, seguridad
+    de la API).
 -->
 
 # Rosa Betania OTs Constitution
 
 **Proyecto:** RosaBetaniaOts — Sistema de Órdenes de Trabajo  
 **Organización:** Rosa Betania SRL  
-**Versión:** 1.0.0  
+**Versión:** 1.1.0  
 **Estado:** Ratificada  
 **Fecha de ratificación:** 2026-10-02  
-**Última modificación:** 2026-10-02
+**Última modificación:** 2026-10-07
 
 ---
 
 ## Propósito
 
-El proyecto **RosaBetaniaOts** tiene como propósito desarrollar una herramienta digital para la
-gestión de Órdenes de Trabajo de **Rosa Betania SRL**, empresa dedicada a la impresión física y
+El proyecto **RosaBetaniaOts** tiene como propósito desarrollar y mantener en evolucion una herramienta digital para la
+gestión de Órdenes de Trabajo de **Rosa Betania SRL**, empresa dedicada a la impresión física offset y
 digital de material gráfico y publicitario.
 
-El sistema deberá mejorar el registro, control, consulta y seguimiento de las Órdenes de Trabajo,
+El sistema primordialmente deberá permitir el registro, control, consulta y seguimiento de las Órdenes de Trabajo,
 reduciendo la dependencia de procesos manuales y facilitando el acceso a la información necesaria
 para la producción.
 
 La solución será una aplicación web responsive con enfoque **mobile-first** para las operaciones de
-registro y consulta rápida de Órdenes de Trabajo.
+registro y consulta rápida de Órdenes de Trabajo. 
 
 Las funciones administrativas, de parametrización, gestión de usuarios, revisión detallada y
 análisis estarán optimizadas también para entorno de escritorio.
 
 Esta Constitution define los principios obligatorios que deberán respetar las especificaciones, el
 modelo de datos, la arquitectura, la implementación y la evolución futura del sistema.
+
+En la 2da Fase de este proyecto, se podra integrar la solucion a MCP o CLI.
 
 ## I. Arquitectura basada en datos — NO NEGOCIABLE
 
@@ -171,6 +186,14 @@ porque sea técnicamente posible.
 
 Toda ampliación deberá responder a una necesidad real de Rosa Betania SRL.
 
+### Fases del proyecto
+
+El MVP descrito en este principio corresponde a la **Fase 1** del proyecto.
+
+La integración con modelos de IA corresponde a la **Fase 2** y queda fuera del alcance del MVP.
+
+La división en fases y sus entregables se rige por el principio **XVIII. Entregables por fases**.
+
 ## V. Seguridad y control de acceso
 
 La seguridad deberá formar parte de la arquitectura y no ser únicamente una característica visual
@@ -286,6 +309,14 @@ documentarse en:
 
 La Constitution establece los principios; la Spec 000 establece las decisiones tecnológicas
 concretas.
+
+### Entregables de la Fase 1
+
+En la Fase 1, backend y frontend DEBEN constituir entregables separados, según el principio
+**XVIII. Entregables por fases**.
+
+El frontend NO DEBE acceder directamente a la persistencia para operaciones de negocio; DEBE
+hacerlo a través de la API del backend.
 
 ## IX. Responsive y consistencia de interfaz
 
@@ -506,6 +537,65 @@ Las Tasks dividen ese plan en trabajo ejecutable.
 
 El código deberá ser consecuencia de estas decisiones y no sustituirlas.
 
+## XVIII. Entregables por fases
+
+El proyecto se organizará en fases con entregables independientes y verificables.
+
+### Fase 1 — Backend y Frontend
+
+La Fase 1 DEBE producir dos entregables separados:
+
+1. **Entregable Backend:** un servidor backend independiente que expone la API del sistema y
+   concentra la lógica de aplicación, la autorización de operaciones y el acceso a la persistencia.
+2. **Entregable Frontend:** la aplicación web responsive y mobile-first (principios III y IX) que
+   consume la API del backend.
+
+Reglas obligatorias:
+
+- Cada entregable DEBE poder construirse, probarse, versionarse y desplegarse de forma
+  independiente.
+- El frontend NO DEBE acceder directamente a la base de datos ni a servicios de persistencia para
+  operaciones de negocio; toda lectura y escritura de datos del dominio DEBE pasar por la API del
+  backend.
+- El contrato entre backend y frontend (operaciones, datos de entrada y salida, errores y
+  autenticación) DEBE estar documentado en las Specs antes de implementarse.
+- Todo cambio incompatible en ese contrato DEBE versionarse y evaluarse según el principio XVI.
+- El backend complementa, y NO reemplaza, las garantías de integridad del modelo relacional
+  (principio VI): las restricciones de la base de datos se mantienen.
+- La tecnología del backend, su estrategia de despliegue y el mecanismo de autenticación entre
+  frontend y backend DEBEN definirse en la Spec 000.
+
+### Fase 2 — Integración con modelos de IA
+
+La Fase 2 incluirá un entregable adicional: un servidor **MCP (Model Context Protocol)** o una
+**CLI** que permita integrar el sistema con un modelo de IA.
+
+Reglas obligatorias:
+
+- La elección entre MCP y CLI, las operaciones expuestas y sus permisos DEBEN definirse en una Spec
+  propia antes de cualquier implementación.
+- La Fase 2 está fuera del alcance del MVP (principio IV); ningún trabajo de Fase 2 DEBE
+  implementarse durante la Fase 1.
+- El entregable de Fase 2 DEBE consumir el sistema a través de la API del backend, con la misma
+  autenticación y autorización por rol que cualquier otro cliente.
+- El entregable de Fase 2 NO DEBE conectarse directamente a la base de datos ni utilizar
+  credenciales privilegiadas que eludan los controles del principio V.
+- Las operaciones sensibles (principio V) DEBEN conservar en Fase 2 las mismas protecciones que en
+  la interfaz web.
+
+### Previsión desde la Fase 1
+
+La API del backend DEBE poder ser utilizada por un cliente distinto de la interfaz web: las reglas
+de negocio y la autorización residen en el backend y en la base de datos, nunca únicamente en el
+frontend.
+
+Esta previsión NO autoriza construir en la Fase 1 funcionalidades específicas para IA
+(principio XV).
+
+**Justificación:** separar backend y frontend permite entregar, validar y desplegar cada parte de
+forma independiente, y prepara una API única y segura que la Fase 2 podrá reutilizar sin duplicar
+reglas de negocio ni abrir accesos alternativos a los datos.
+
 ---
 
-**Versión:** 1.0.0 | **Ratificada:** 2026-10-02 | **Última modificación:** 2026-10-02
+**Versión:** 1.1.0 | **Ratificada:** 2026-10-02 | **Última modificación:** 2026-10-07
