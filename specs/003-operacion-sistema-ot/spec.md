@@ -30,6 +30,20 @@ controladas del 2026-10-06 y Enmienda 3 del 2026-10-08
   y correcciones administrativas excepcionales trazadas, sin eliminación ni movimientos. Una OT
   terminada no vuelve automáticamente a `EN_PROCESO` y la anulación no exige motivo en el MVP.
 
+### Session 2026-10-08
+
+- Q: ¿Cómo obtiene su primera contraseña una persona cuya cuenta acaba de crear el ADMINISTRADOR?
+  → A: Recibe en su correo un enlace de invitación de un solo uso y con caducidad para definir su
+  contraseña; si caduca, el ADMINISTRADOR puede reenviarlo.
+- Q: ¿Qué debe pasar cuando alguien falla varias veces seguidas la contraseña de una misma cuenta?
+  → A: Tras 5 intentos fallidos consecutivos la cuenta se bloquea 15 minutos y luego se desbloquea
+  sola; durante el bloqueo se puede recuperar la contraseña por correo; el mensaje de error es
+  siempre el mismo.
+- Q: ¿Qué requisitos mínimos debe cumplir una contraseña? → A: Mínimo 8 caracteres, sin más reglas.
+- Q: ¿Puede el ADMINISTRADOR revertir una anulación hecha por error? → A: Sí. La OT vuelve al estado
+  que tenía antes (`PENDIENTE` si no tiene movimientos, `EN_PROCESO` si los tiene), se borra
+  `anulado_en` y se actualiza la trazabilidad.
+
 ## Enmienda técnica controlada — 2026-10-06
 
 La enmienda posterior a aprobación de Spec 002 formaliza dos metadatos de `orden_trabajo` sin
@@ -214,6 +228,9 @@ trazabilidad de última modificación y el recorrido anterior permanece inmutabl
    trazabilidad de última modificación, sin generar movimientos ni cambiar el estado terminal.
 6. **Given** cualquier OT, **When** se intenta eliminarla físicamente por cualquier vía, **Then** el
    sistema no ofrece esa operación y la rechaza, cualquiera sea su estado.
+7. **Given** una OT anulada por error, **When** el ADMINISTRADOR confirma revertir la anulación,
+   **Then** vuelve a `PENDIENTE` o `EN_PROCESO` según tenga o no movimientos, `anulado_en` queda sin
+   valor y su recorrido no cambia.
 
 ---
 
@@ -230,7 +247,10 @@ uno de los dos roles aprobados y activar o inactivar datos maestros sin romper r
 **Acceptance Scenarios**:
 
 1. **Given** una nueva persona usuaria, **When** el ADMINISTRADOR crea su cuenta y perfil, **Then**
-   asigna `ADMINISTRADOR` o `USUARIO`; si es `USUARIO`, también asigna su sector.
+   asigna `ADMINISTRADOR` o `USUARIO`; si es `USUARIO`, también asigna su sector; y la persona recibe
+   por correo un enlace de invitación para definir su contraseña.
+5. **Given** una invitación caducada o no recibida, **When** el ADMINISTRADOR la reenvía, **Then** se
+   emite un enlace nuevo y el anterior deja de ser válido.
 2. **Given** un cliente, catálogo o responsable activo, **When** se inactiva, **Then** deja de
    aparecer en selecciones nuevas y permanece identificable en registros históricos.
 3. **Given** un sector con historial, **When** se inactiva o cambia su nombre visible, **Then** sus
@@ -309,6 +329,16 @@ la trazabilidad de las historias 1 a 8.
 - Un reintento de creación con la misma `idempotencia_creacion` no debe crear otra OT; edición,
   movimiento, devolución, finalización o anulación tampoco deben repetir efectos sin
   verificar estado, locks y precondiciones aprobadas.
+- Un enlace de invitación caducado, ya usado o reemplazado por un reenvío no permite definir la
+  contraseña; la persona debe solicitar un nuevo envío al ADMINISTRADOR.
+- Un sexto intento con la contraseña correcta dentro de los 15 minutos de bloqueo se rechaza con el
+  mismo mensaje genérico; no revela que la cuenta está bloqueada.
+- Una contraseña de menos de 8 caracteres se rechaza al aceptar una invitación o completar una
+  recuperación, explicando el mínimo requerido y sin consumir el enlace.
+- Al revertir la anulación de una OT `EN_PROCESO`, la permanencia de su etapa actual vuelve a
+  derivarse desde su última entrada hasta el momento de consulta, incluyendo el tiempo que estuvo
+  anulada.
+- Una OT `TERMINADO` no admite reversión de anulación ni reapertura por esta vía.
 - Si la sesión deja de ser válida durante una operación, no se confirma un resultado ambiguo y se
   orienta al usuario para recuperar el acceso de forma segura.
 
@@ -331,7 +361,8 @@ la trazabilidad de las historias 1 a 8.
 
 - **FR-005**: Toda operación de negocio DEBE requerir una identidad autenticada y un perfil activo
   autorizado. Las únicas operaciones sin sesión permitidas son presentar el acceso, autenticar por
-  correo/contraseña y solicitar o completar la recuperación de contraseña; ninguna de ellas habilita
+  correo/contraseña, aceptar una invitación definiendo la contraseña y solicitar o completar la
+  recuperación de contraseña; ninguna de ellas habilita
   auto-registro ni acceso a datos del negocio.
 - **FR-006**: El `ADMINISTRADOR` DEBE poder ver todas las OT; crear, editar, corregir y anular OT;
   moverlas y corregir recorridos; administrar usuarios, asignaciones de rol, clientes, catálogos,
@@ -353,6 +384,10 @@ la trazabilidad de las historias 1 a 8.
 
 - **FR-013**: La creación y administración de cuentas DEBE corresponder únicamente al
   `ADMINISTRADOR`; no se aprueba auto-registro público.
+- **FR-013a**: Al crear una cuenta, el sistema DEBE enviar al correo de la persona un enlace de
+  invitación de un solo uso y con caducidad para que defina su contraseña. El ADMINISTRADOR NO DEBE
+  definir ni conocer contraseñas ajenas. Una cuenta sin invitación aceptada NO DEBE poder iniciar
+  sesión. El ADMINISTRADOR DEBE poder reenviar la invitación, lo que invalida el enlace anterior.
 - **FR-014**: La identidad autenticada DEBE gestionarse en el backend del sistema conforme a Spec 000
   v1.1.0, usando la cuenta de `perfil_usuario` definida por Spec 002; la contraseña solo se almacena
   como hash y las sesiones, invitaciones y recuperaciones usan `token_usuario`.
@@ -364,6 +399,13 @@ la trazabilidad de las historias 1 a 8.
 - **FR-017**: El acceso DEBE realizarse mediante correo y contraseña y la recuperación de contraseña
   DEBE ofrecerse por correo. La sesión DEBE respetar la continuidad y terminación funcionales de
   Spec 001; sus tiempos y configuración técnica corresponden a Plan.
+- **FR-017a**: Tras 5 intentos fallidos consecutivos de inicio de sesión sobre una misma cuenta, el
+  sistema DEBE bloquear su inicio de sesión durante 15 minutos y desbloquearla automáticamente al
+  vencer ese plazo. Un acceso exitoso reinicia el conteo. Durante el bloqueo DEBE seguir disponible
+  la recuperación de contraseña por correo, y completarla desbloquea la cuenta. El mensaje ante
+  credenciales incorrectas, cuenta bloqueada o correo inexistente DEBE ser idéntico.
+- **FR-017b**: Al definir o restablecer una contraseña, el sistema DEBE exigir un mínimo de 8
+  caracteres y NO DEBE imponer otras reglas de composición ni caducidad periódica.
 
 ### Administración de datos maestros
 
@@ -438,12 +480,17 @@ la trazabilidad de las historias 1 a 8.
   sector actual sea PRODUCCIÓN; puede ejecutarla el `USUARIO` de ese sector o un `ADMINISTRADOR`,
   debe establecer `TERMINADO` y conservar el momento de cierre.
 - **FR-048**: El flujo normal NO DEBE retroceder una OT desde `TERMINADO` o `ANULADO` ni generar
-  movimientos productivos nuevos para esos estados.
+  movimientos productivos nuevos para esos estados. La única excepción es la reversión de anulación
+  de FR-049a.
 - **FR-049**: Solo el `ADMINISTRADOR` DEBE anular una OT `PENDIENTE` o `EN_PROCESO`; el MVP NO DEBE
-  exigir motivo de anulación. Una OT `TERMINADO` o `ANULADO` NO DEBE anularse nuevamente ni reabrirse
-  mediante esta acción. El cambio a `ANULADO` y el registro servidor de `anulado_en` DEBEN ser
+  exigir motivo de anulación. Una OT `TERMINADO` o `ANULADO` NO DEBE anularse nuevamente; la reversión de
+  una anulación se rige exclusivamente por FR-049a. El cambio a `ANULADO` y el registro servidor de `anulado_en` DEBEN ser
   atómicos; ese momento cierra la última permanencia productiva cuando existe.
-
+- **FR-049a**: Solo el `ADMINISTRADOR` DEBE poder revertir la anulación de una OT `ANULADO`, previa
+  confirmación explícita. La OT DEBE volver a `PENDIENTE` si no tiene movimientos productivos o a
+  `EN_PROCESO` si los tiene; `anulado_en` DEBE quedar sin valor en la misma operación atómica y la
+  trazabilidad de última modificación DEBE actualizarse. La reversión NO DEBE crear, editar ni
+  eliminar movimientos.
 ### Sectores, responsables y movimientos
 
 - **FR-050**: Una OT DEBE poder iniciar en DISEÑO, PRENSA, PRE_ACABADO o PRODUCCIÓN, según el trabajo,
@@ -546,7 +593,7 @@ Spec 003 no redefine entidades. Utiliza conceptualmente las 15 entidades lógica
 | PRE_ACABADO | Avanzar a PRODUCCIÓN; devolver a PRENSA o DISEÑO | Avanzar hacia ALMACÉN |
 | PRODUCCIÓN | Marcar terminado; devolver a PRE_ACABADO, PRENSA o DISEÑO | Finalización automática por llegada |
 | `TERMINADO` | Consulta e historial; corrección administrativa excepcional y trazada | Eliminación; avance, devolución o reapertura automática |
-| `ANULADO` | Consulta e historial; corrección administrativa excepcional y trazada | Eliminación; inicio, avance, devolución o finalización |
+| `ANULADO` | Consulta e historial; corrección administrativa excepcional y trazada; revertir anulación por ADMINISTRADOR | Eliminación; inicio, avance, devolución o finalización |
 
 Las OT `EN_PROCESO` admiten correcciones administrativas trazadas y anulación. Ninguna OT admite
 eliminación física. Las correcciones excepcionales en estados terminales no modifican movimientos históricos ni
@@ -629,14 +676,22 @@ También quedan fuera del alcance funcional del MVP:
 - **SC-013**: Un entorno local o de prueba nuevo puede provisionar exactamente un primer
   `ADMINISTRADOR` mediante el procedimiento privilegiado documentado, sin habilitar auto-registro,
   exponer secretos al frontend ni dejar una ruta pública de bootstrap activa.
-- **SC-014**: Una prueba de acceso válida usa correo y contraseña, una prueba de recuperación ofrece
-  el flujo por correo y ningún recorrido permite auto-registro público.
+- **SC-014**: Una prueba de acceso válida usa correo y contraseña, una prueba de alta completa el
+  flujo de invitación por correo hasta el primer acceso, una prueba de recuperación ofrece el flujo
+  por correo y ningún recorrido permite auto-registro público.
 - **SC-015**: El 100 % de los intentos de eliminar físicamente una OT es rechazado, cualquiera sea su
   estado; una OT retirada queda `ANULADO` y sigue siendo consultable con su código.
 - **SC-016**: El 100 % de las correcciones administrativas excepcionales probadas sobre OT
   `TERMINADO` o `ANULADO` actualiza su trazabilidad de última modificación, conserva el estado terminal y no genera movimientos
   productivos; anular una OT válida no exige motivo en el MVP, registra `anulado_en` y cierra su
   última permanencia productiva.
+- **SC-017**: En una prueba con 5 contraseñas incorrectas consecutivas, el sexto intento (incluso
+  con la contraseña correcta) se rechaza durante 15 minutos, la cuenta vuelve a aceptar acceso al
+  vencer el plazo o tras una recuperación completada, y los mensajes de error no permiten distinguir
+  cuenta bloqueada, contraseña incorrecta ni correo inexistente.
+- **SC-018**: El 100 % de las reversiones de anulación probadas devuelve la OT a `PENDIENTE` (sin
+  movimientos) o `EN_PROCESO` (con movimientos), deja `anulado_en` sin valor, conserva intacto el
+  recorrido y solo puede ejecutarla un ADMINISTRADOR.
 
 ## Assumptions
 
