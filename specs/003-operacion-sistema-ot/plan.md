@@ -1,5 +1,11 @@
 # Implementation Plan: Spec 003 — Operación funcional del sistema de Órdenes de Trabajo
 
+> ⚠️ **OBSOLETO desde 2026-10-08.** Este artefacto se basa en la arquitectura anterior (frontend
+> conectado directamente a Supabase, auditoría completa y eliminación física de OT). La Constitution
+> v1.1.0, la Spec 000 v1.1.0, la Enmienda 3 de Spec 002 y la Enmienda funcional de esta Spec lo
+> invalidan. **No implementar tareas de este archivo**; regenerar con `/speckit-plan` y
+> `/speckit-tasks`.
+
 **Branch**: `main` | **Date**: 2026-10-06 | **Spec**: [spec.md](./spec.md)
 **Plan Status**: COMPLETO — aprobado y sincronizado con Tasks
 

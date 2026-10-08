@@ -58,3 +58,7 @@
 - La migración de la base anterior queda fuera del MVP y no bloquea el desarrollo.
 - Los límites funcionales ya no confunden el alcance del producto con las fases o artefactos del flujo
   Spec Kit; Plan y Tasks conservan la autoridad sobre los detalles de implementación.
+- Revalidación 2026-10-08 tras la Enmienda funcional: 16 de 16 controles siguen aprobados. La Spec
+  referencia ahora las 15 entidades de Spec 002 (Enmienda 3); se retiran la User Story 9 y la
+  eliminación física de OT, y la auditoría se sustituye por trazabilidad de creación y última
+  modificación. Plan y Tasks quedan obsoletos hasta replanificar.

@@ -1,5 +1,11 @@
 # Tasks: Spec 003 — Operación funcional del sistema de Órdenes de Trabajo
 
+> ⚠️ **OBSOLETO desde 2026-10-08.** Este artefacto se basa en la arquitectura anterior (frontend
+> conectado directamente a Supabase, auditoría completa y eliminación física de OT). La Constitution
+> v1.1.0, la Spec 000 v1.1.0, la Enmienda 3 de Spec 002 y la Enmienda funcional de esta Spec lo
+> invalidan. **No implementar tareas de este archivo**; regenerar con `/speckit-plan` y
+> `/speckit-tasks`.
+
 **Input**: artefactos aprobados de `specs/003-operacion-sistema-ot/`  
 **Prerequisites**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/interfaces.md`, `quickstart.md`, Constitution, Spec 000, Spec 001 y Spec 002 APROBADA  
 **Tests**: obligatorios; en cada historia se escriben primero y deben fallar antes de implementar  
