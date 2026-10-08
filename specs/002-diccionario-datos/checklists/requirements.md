@@ -33,21 +33,21 @@
 
 ## Validación específica del Diccionario de Datos
 
-- [x] El inventario final contiene 16 entidades lógicas; `cliente` incluye nombre, contacto y estado Activo/Inactivo sin código empresarial ni NIT
+- [x] El inventario final contiene 15 entidades lógicas (Enmienda 3); `cliente` incluye nombre, contacto y estado Activo/Inactivo sin código empresarial ni NIT
 - [x] `tipo_material`, `material` y `gramaje` conservan sus responsabilidades separadas
 - [x] `ot_detalle` conserva 0..3 pisos, montaje, dimensiones X/Y en centímetros y muestrario obligatorio
 - [x] `sector` documenta códigos, orden, participación en flujo, estado y catálogo inicial
 - [x] ALMACÉN existe con `participa_flujo = false` y no es destino productivo
-- [x] `responsable_sector` permanece separado de `perfil_usuario` y de Supabase Auth
+- [x] `responsable_sector` permanece separado de `perfil_usuario` y no tiene cuenta de acceso
 - [x] `perfil_usuario.sector_id` aplica obligatoriamente a USUARIO y opcionalmente a ADMINISTRADOR
 - [x] `movimiento_ot` permite inicio variable, saltos, devoluciones y ciclos sin sobrescribir historia
 - [x] Sector actual, responsable actual y tiempos son derivados sin fuentes duplicadas
 - [x] Estado de OT y sector actual están modelados como conceptos diferentes
-- [x] `movimiento_ot` y auditoría tienen finalidades diferentes y coexistentes
+- [x] `movimiento_ot` es el historial funcional y las entidades editables documentan trazabilidad mínima (Enmienda 3)
 - [x] Las nuevas cardinalidades aparecen en el mapa de relaciones
 - [x] Las decisiones del flujo pendientes están clasificadas para Spec 003
 - [x] No quedan decisiones estructurales bloqueantes
-- [x] El estado es `APROBADA` por decisión humana del 2026-10-06
+- [ ] El estado es `APROBADA` por decisión humana (Enmienda 3 del 2026-10-08 pendiente de aprobación)
 - [x] El documento no contiene SQL, migraciones, Plan, Tasks ni implementación
 
 ## Notes
@@ -55,10 +55,12 @@
 - **32 de 32 controles aprobados** después de reevaluar el contenido real de la especificación; la
   aclaración de migración y las enmiendas de `cliente` y metadatos técnicos de OT también fueron
   verificadas.
-- El modelo final contiene 16 entidades: `cliente`, `orden_trabajo`, `ot_detalle`,
-  `tipo_material`, `material`, `gramaje`, `maquina`, `parametro`, `ot_acabado`, `rol`,
-  `perfil_usuario`, `sector`, `responsable_sector`, `movimiento_ot`, `auditoria_evento` y
-  `auditoria_cambio`.
+- Tras la Enmienda 3 (2026-10-08) el modelo contiene 15 entidades: `cliente`, `orden_trabajo`,
+  `ot_detalle`, `tipo_material`, `material`, `gramaje`, `maquina`, `parametro`, `ot_acabado`, `rol`,
+  `perfil_usuario`, `token_usuario`, `sector`, `responsable_sector` y `movimiento_ot`. Se retiraron
+  `auditoria_evento` y `auditoria_cambio`; una OT ya no se elimina físicamente (se anula).
+- Revalidación 2026-10-08: 31 de 32 controles aprobados; queda pendiente la aprobación humana de la
+  Enmienda 3.
 - Enmienda posterior a aprobación del 2026-10-06: `cliente` conserva `id`, `nombre`, `telefono`,
   `correo` y `estado boolean` con Activo como valor conceptual predeterminado; no contiene `nit` ni
   un código empresarial adicional.

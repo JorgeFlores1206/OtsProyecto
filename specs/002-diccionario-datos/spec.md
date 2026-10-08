@@ -2,10 +2,10 @@
 
 **Directorio**: `specs/002-diccionario-datos`
 **Creada**: 2026-10-02
-**Actualizada**: 2026-10-06
-**Estado**: APROBADA
+**Actualizada**: 2026-10-08
+**Estado**: APROBADA — Enmienda 3 (2026-10-08) pendiente de aprobación
 **Fecha de aprobación**: 2026-10-06
-**Fuentes**: Constitution v1.0.0, Spec 000, Spec 001 y decisiones proporcionadas para Spec 002
+**Fuentes**: Constitution v1.1.0, Spec 000 v1.1.0, Spec 001 y decisiones proporcionadas para Spec 002
 
 ## Enmiendas posteriores a aprobación
 
@@ -31,6 +31,27 @@
   semántica empresarial de la OT. Amplía `orden_trabajo` únicamente con metadatos técnicos y de
   trazabilidad; Spec 002 conserva el estado `APROBADA`.
 
+### Enmienda 3 — Trazabilidad mínima, autenticación propia y anulación en lugar de borrado
+
+- **Fecha de enmienda**: 2026-10-08.
+- **Cambio**:
+  1. Se retiran `auditoria_evento` y `auditoria_cambio`. La trazabilidad queda en el mínimo del
+     principio X: creado por, creado en, modificado por y modificado en, en cada entidad editable.
+  2. Se extienden esos atributos de trazabilidad a los maestros editables, que antes dependían de la
+     auditoría completa.
+  3. `perfil_usuario` deja de enlazar una identidad de Supabase Auth: incorpora `correo`, `nombre` y
+     `contrasena_hash`, y se retira `auth_usuario_id`. Se agrega la entidad `token_usuario` para
+     sesiones, invitaciones y recuperación de contraseña.
+  4. Una OT ya no se elimina físicamente: la única forma de retirarla es la anulación.
+- **Motivo**: Constitution v1.1.0 (XVIII, backend separado) y Spec 000 v1.1.0 (autenticación
+  gestionada por el backend; trazabilidad mínima sin historial de cambios). La anulación evita que
+  una OT desaparezca sin rastro y que su código correlativo quede sin explicación.
+- **Impacto**: el modelo pasa de 16 a **15 entidades** (−2 de auditoría, +1 `token_usuario`). Sin
+  historial de cambios no se conservan valores anteriores ni quién modificó antes de la última
+  modificación. Exige enmendar la Spec 003 (US6, US9, FR-006, FR-014, FR-030, FR-073–FR-077, SC-010,
+  SC-013, SC-015) y replanificarla.
+- **Aprobación**: pendiente de revisión humana (Constitution I y XVI).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Comprender el contrato estructural (Priority: P1)
@@ -38,7 +59,7 @@
 Como responsable del proyecto, quiero conocer las entidades, atributos, claves, nulabilidad y
 relaciones del modelo sin consultar código para aprobar su estructura antes de implementarla.
 
-**Independent Test**: Cada una de las 16 entidades candidatas indica por qué existe, sus datos,
+**Independent Test**: Cada una de las 15 entidades candidatas indica por qué existe, sus datos,
 relaciones y reglas; las decisiones pendientes distinguen expresamente lo funcional de lo
 estructural.
 
@@ -50,8 +71,9 @@ estructural.
 2. **Given** una decisión aún no resuelta, **When** se revisa su clasificación, **Then** se puede
    determinar si pertenece a una futura Spec funcional o a una decisión física posterior y si
    bloquea la aprobación estructural.
-3. **Given** el inventario del modelo, **When** se cuentan sus entidades, **Then** se obtienen 16
-   entidades lógicas, incluidas `tipo_material`, `sector`, `responsable_sector` y `movimiento_ot`.
+3. **Given** el inventario del modelo, **When** se cuentan sus entidades, **Then** se obtienen 15
+   entidades lógicas, incluidas `tipo_material`, `sector`, `responsable_sector`, `movimiento_ot` y
+   `token_usuario`.
 
 ---
 
@@ -106,14 +128,15 @@ depender de una ruta fija.
 
 ---
 
-### User Story 4 - Separar operación, responsabilidad física y auditoría (Priority: P2)
+### User Story 4 - Separar operación, responsabilidad física y trazabilidad (Priority: P2)
 
 Como responsable del negocio, quiero distinguir al usuario autenticado de la persona que realiza el
-trabajo físico y del historial técnico de cambios para conservar responsabilidades claras.
+trabajo físico y saber quién creó y modificó por última vez cada registro para conservar
+responsabilidades claras.
 
 **Independent Test**: Cada movimiento identifica un `perfil_usuario` como actor y un
 `responsable_sector` como responsable físico; `movimiento_ot` conserva el recorrido del negocio y
-`auditoria_evento`/`auditoria_cambio` conservan el control de cambios.
+cada entidad editable conserva sus atributos de creación y última modificación.
 
 **Acceptance Scenarios**:
 
@@ -121,10 +144,10 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
    responsable a una persona activa de PRENSA que no necesita credenciales.
 2. **Given** un cambio de usuario operativo del sector, **When** se consulta un movimiento anterior,
    **Then** el perfil que lo realizó permanece identificado.
-3. **Given** un movimiento productivo, **When** se audita la operación, **Then** el movimiento y el
-   evento de auditoría pueden coexistir sin reemplazarse entre sí.
-4. **Given** la eliminación operacional de una OT, **When** se consulta la auditoría, **Then** su
-   historial de control permanece disponible.
+3. **Given** un registro editable modificado, **When** se consulta, **Then** identifica quién lo creó,
+   cuándo, quién lo modificó por última vez y cuándo.
+4. **Given** una OT que ya no debe trabajarse, **When** el ADMINISTRADOR la retira, **Then** queda
+   `ANULADO` con su momento de anulación y continúa existiendo con su código.
 
 ### Edge Cases
 
@@ -145,7 +168,10 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
 - Una OT ANULADA no admite avances, devoluciones ni nuevos movimientos productivos.
 - La inactivación o edición posterior de un sector, responsable o perfil no rompe las referencias
   de movimientos ya registrados.
-- Un reintento no debe duplicar pisos, acabados, movimientos ni eventos de auditoría.
+- Un reintento no debe duplicar pisos, acabados ni movimientos.
+- Una OT nunca se elimina físicamente; aunque no tenga movimientos, se retira mediante anulación.
+- Un enlace de invitación o recuperación caducado, usado o revocado no permite establecer una
+  contraseña.
 
 ## Requirements *(mandatory)*
 
@@ -196,7 +222,7 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
   cualquier sector anterior permitido; ambos destinos deben participar en el flujo.
 - **DR-023**: `movimiento_ot.responsable_sector_id` DEBE identificar a una persona del sector destino
   y `realizado_por_perfil_id` DEBE identificar al usuario autenticado que realizó la operación.
-- **DR-024**: El actor de un movimiento o auditoría NUNCA DEBE recibirse como identidad libre
+- **DR-024**: El actor de un movimiento o de la trazabilidad NUNCA DEBE recibirse como identidad libre
   proporcionada por el navegador.
 - **DR-025**: El sector actual y el responsable actual DEBEN derivarse del último movimiento de la OT;
   no se aprueban `orden_trabajo.sector_actual_id` ni `orden_trabajo.responsable_actual_id`.
@@ -209,29 +235,32 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
 
 ### Requisitos de usuarios, estados y conservación histórica
 
-- **DR-028**: `perfil_usuario` DEBE enlazar una identidad de Supabase Auth sin guardar credenciales.
+- **DR-028**: `perfil_usuario` DEBE representar la cuenta de acceso de una persona usuaria con un
+  `correo` único y su contraseña almacenada exclusivamente como `contrasena_hash`; nunca en texto
+  plano.
 - **DR-029**: Un perfil con rol `USUARIO` DEBE pertenecer a un sector; un perfil
   `ADMINISTRADOR` PUEDE tener `sector_id` null y no queda restringido a un solo sector operativo.
 - **DR-030**: Un sector PUEDE conservar distintos perfiles históricamente, pero solo un `USUARIO`
   operativo activo por sector en un momento determinado; esta es una regla lógica, no un mecanismo
   físico aprobado en esta Spec.
-- **DR-031**: `responsable_sector` DEBE representar personas físicas sin credenciales ni relación con
-  Supabase Auth.
+- **DR-031**: `responsable_sector` DEBE representar personas físicas sin credenciales ni cuenta de
+  acceso.
 - **DR-032**: Solo un responsable del sector destino PUEDE quedar como responsable actual de la OT y
   los responsables anteriores DEBEN permanecer en el historial de movimientos.
 - **DR-033**: Una OT nueva DEBE iniciar en `PENDIENTE`; su primer `INICIO` productivo la cambia a
   `EN_PROCESO`; los movimientos posteriores no cambian ese estado por sí solos.
 - **DR-034**: La llegada a PRODUCCIÓN NO DEBE cambiar automáticamente la OT a `TERMINADO`; la
-  finalización es una acción manual y auditable.
+  finalización es una acción manual y trazable.
 - **DR-035**: Una OT `ANULADA` NO DEBE generar nuevos movimientos productivos.
-- **DR-036**: `movimiento_ot` DEBE conservar hechos funcionales del recorrido y
-  `auditoria_evento`/`auditoria_cambio` DEBEN conservar hechos de control; ninguna estructura
-  reemplaza a la otra.
-- **DR-037**: La eliminación operacional de una OT NO DEBE eliminar su historial de auditoría.
+- **DR-036**: `movimiento_ot` DEBE conservar los hechos funcionales del recorrido. El modelo NO
+  incluye historial de cambios con valores anteriores y nuevos; la trazabilidad se limita a los
+  atributos de creación y última modificación (DR-043).
+- **DR-037**: Una OT NO DEBE eliminarse físicamente. La única forma de retirarla es la anulación
+  (`ANULADO` con `anulado_en`), que conserva el registro, su código y sus dependencias.
 - **DR-038**: Los sectores, responsables y perfiles usados históricamente DEBEN inactivarse en lugar
   de borrarse cuando su eliminación rompería el historial.
-- **DR-039**: Cabecera, pisos, acabados, movimientos y auditoría de una OT DEBEN preservar una unidad
-  lógica consistente.
+- **DR-039**: Cabecera, pisos, acabados y movimientos de una OT DEBEN preservar una unidad lógica
+  consistente.
 - **DR-040**: El modelo DEBE conservar la hora de finalización para cerrar el tiempo del último
   sector, sin crear una entidad independiente solo para finalizar.
 - **DR-041**: La creación agregada de una OT DEBE quedar asociada a una clave técnica durable y
@@ -241,6 +270,14 @@ trabajo físico y del historial técnico de cambios para conservar responsabilid
 - **DR-042**: Una transición a `ANULADO` DEBE registrar `anulado_en` atómicamente con el cambio de
   estado, usando el momento confiable de la operación servidor/base de datos. El navegador NO DEBE
   proporcionar como confiables el actor ni ese timestamp.
+- **DR-043**: Toda entidad editable DEBE incluir `creado_por_perfil_id`, `creado_en`,
+  `modificado_por_perfil_id` y `modificado_en`, asignados por el backend a partir de la identidad
+  autenticada y del momento confiable de la operación. Se exceptúan `movimiento_ot` (inmutable, con
+  su propio actor y momento), `ot_acabado` (solo creación) y `token_usuario`.
+- **DR-044**: Un `perfil_usuario` creado por invitación PUEDE tener `contrasena_hash` null hasta que
+  la persona establezca su contraseña; mientras sea null no puede iniciar sesión.
+- **DR-045**: Los tokens de sesión, invitación y recuperación DEBEN almacenarse únicamente como hash,
+  tener caducidad y poder revocarse; los de invitación y recuperación son de un solo uso.
 
 ## COMPARACIÓN CON EL MODELO EXISTENTE
 
@@ -252,12 +289,12 @@ prescribe una implementación física.
 ## Convenciones, clasificación e inventario
 
 - Las claves locales usan conceptualmente `integer`; las entidades de historial de alto crecimiento
-  usan `bigint`; la identidad externa de Auth usa `uuid`.
+  usan `bigint`; `idempotencia_creacion` usa `uuid`.
 - Los tipos lógicos empleados son `text`, `integer`, `smallint`, `numeric`, `date`, `timestamptz` y
   `boolean`. No constituyen SQL ni fijan una implementación física.
 - Las dimensiones numéricas se expresan en centímetros.
 - “Generado” y “automático” describen un default lógico; su mecanismo se define posteriormente.
-- El modelo candidato contiene **16 entidades lógicas**.
+- El modelo candidato contiene **15 entidades lógicas**.
 
 | Categoría | Entidades |
 |---|---|
@@ -265,13 +302,12 @@ prescribe una implementación física.
 | Materiales y recursos | `tipo_material`, `material`, `gramaje`, `maquina` |
 | Catálogos y operación | `parametro`, `sector`, `responsable_sector` |
 | Relación multivaluada | `ot_acabado` |
-| Seguridad | `rol`, `perfil_usuario` |
+| Seguridad | `rol`, `perfil_usuario`, `token_usuario` |
 | Flujo productivo | `movimiento_ot` |
-| Auditoría | `auditoria_evento`, `auditoria_cambio` |
 
 Inventario completo: `cliente`, `orden_trabajo`, `ot_detalle`, `tipo_material`, `material`,
 `gramaje`, `maquina`, `parametro`, `ot_acabado`, `rol`, `perfil_usuario`, `sector`,
-`responsable_sector`, `movimiento_ot`, `auditoria_evento` y `auditoria_cambio`.
+`responsable_sector`, `movimiento_ot` y `token_usuario`.
 
 ## MAPA DE RELACIONES
 
@@ -293,8 +329,8 @@ responsable_sector 1 ── N movimiento_ot
 perfil_usuario 1 ── N movimiento_ot como actor
 
 rol 1 ── N perfil_usuario
-Supabase Auth user 1 ── 0..1 perfil_usuario
-perfil_usuario 1 ── N auditoria_evento 1 ── 1..N auditoria_cambio
+perfil_usuario 1 ── N token_usuario
+perfil_usuario 1 ── N registros editables como creador o último modificador
 ```
 
 La participación como origen admite null únicamente en el primer `INICIO`; por eso un sector puede
@@ -331,6 +367,22 @@ tipo de trabajo.
 ## DICCIONARIO DE DATOS MAESTRO
 
 En las tablas siguientes, `—` significa que no existe FK. Las reglas son lógicas y no generan SQL.
+
+### Atributos de trazabilidad comunes
+
+Las entidades `cliente`, `orden_trabajo`, `ot_detalle`, `tipo_material`, `material`, `gramaje`,
+`maquina`, `parametro`, `rol`, `perfil_usuario`, `sector` y `responsable_sector` incluyen, además de
+los atributos listados en su tabla, los siguientes (DR-043):
+
+| Atributo | Tipo lógico | Nulo/default | Unicidad/FK y restricción |
+|---|---|---|---|
+| `creado_por_perfil_id` | integer | Sí/null | FK `perfil_usuario`; null solo en datos iniciales y en el primer ADMINISTRADOR |
+| `creado_en` | timestamptz | No/generado | Momento confiable de creación |
+| `modificado_por_perfil_id` | integer | Sí/null | FK `perfil_usuario`; null mientras no haya modificaciones |
+| `modificado_en` | timestamptz | Sí/null | Momento confiable de la última modificación |
+
+Solo se conserva la última modificación; no existe historial de valores anteriores. En
+`orden_trabajo`, `creado_por_perfil_id` es obligatorio porque toda OT la crea un ADMINISTRADOR.
 
 ### `cliente`
 
@@ -375,13 +427,11 @@ Finalidad: representar un trabajo de producción. PK: `id`.
 | `creado_en` | timestamptz | No/generado | Trazabilidad básica |
 | `modificado_en` | timestamptz | Sí/null | Trazabilidad básica |
 
-Relaciones: N:1 con cliente; 1:0..3 con detalles; 1:N con acabados, movimientos y eventos de
-auditoría vinculados lógicamente. `cantidad_pisos` es derivada y no se persiste. Tampoco se agregan
+Relaciones: N:1 con cliente; 1:0..3 con detalles; 1:N con acabados y movimientos. `cantidad_pisos` es derivada y no se persiste. Tampoco se agregan
 `sector_actual_id` ni `responsable_actual_id`: ambos valores provienen del último movimiento.
 
-La eliminación operacional solo corresponde al `ADMINISTRADOR` bajo las reglas funcionales
-aprobadas y nunca elimina la auditoría. Las acciones referenciales físicas de sus dependencias se
-decidirán posteriormente sin alterar estas relaciones.
+Una OT no se elimina físicamente (DR-037). El `ADMINISTRADOR` la retira mediante anulación, que
+conserva el registro, su código correlativo, sus pisos, acabados y movimientos.
 
 #### Estado y finalización de la OT
 
@@ -504,23 +554,23 @@ Finalidad: representar la relación multivaluada y opcional OT–acabado. PK com
 | `creado_en` | timestamptz | No/generado | Momento de asignación |
 
 Una OT puede tener cero o más acabados sin repetirlos. `PERFORADO`, `ENGOMADO`, `ANILLADO` y
-`ENGRAMPADO` requieren posición. Quitar un acabado es auditable; la auditoría no se elimina con la
-relación operacional.
+`ENGRAMPADO` requieren posición. Quitar un acabado elimina la relación; la modificación queda
+reflejada en `orden_trabajo.modificado_por_perfil_id` y `modificado_en`.
 
 ### `rol` y `perfil_usuario`
 
 | Entidad | PK y atributos lógicos | Reglas |
 |---|---|---|
 | `rol` | `id integer`; `codigo text` único; `nombre text`; `estado boolean=true` | Códigos iniciales `ADMINISTRADOR` y `USUARIO`; inactivar si fue asignado. |
-| `perfil_usuario` | `id integer`; `auth_usuario_id uuid` único; `rol_id integer` FK; `sector_id integer` FK nullable; `estado boolean=true` | Una identidad Auth tiene 0..1 perfil; no guarda contraseñas; se conserva si aparece en movimientos o auditoría. |
+| `perfil_usuario` | `id integer`; `correo text` único; `nombre text`; `contrasena_hash text` nullable; `rol_id integer` FK; `sector_id integer` FK nullable; `estado boolean=true` | Es la cuenta de acceso; la contraseña solo existe como hash (DR-028, DR-044); se conserva e inactiva si aparece en movimientos o como actor de trazabilidad. |
 
 Para `USUARIO`, `sector_id` es obligatorio y debe apuntar a su sector operativo. Para
 `ADMINISTRADOR`, puede ser null y no limita su alcance a un único sector. Inicialmente existe un solo
 usuario operativo activo por sector. Un sector puede acumular varios perfiles históricos, pero no
 más de un `USUARIO` operativo activo simultáneo; el mecanismo para garantizarlo no se define aquí.
 
-Cambiar el usuario operativo no reescribe actores anteriores: cada movimiento y evento conserva el
-perfil autenticado que lo realizó. La identidad del actor se obtiene del contexto autenticado, nunca
+Cambiar el usuario operativo no reescribe actores anteriores: cada movimiento conserva el perfil
+autenticado que lo realizó. La identidad del actor se obtiene del contexto autenticado, nunca
 de un valor libre del navegador.
 
 ### `sector`
@@ -568,8 +618,8 @@ responsables de una OT sin necesitar una cuenta del sistema. PK: `id`.
 | `nombre` | text | No/— | No se asume unicidad global |
 | `estado` | boolean | No/true | Activo/Inactivo |
 
-Relación N:1 con `sector` y 1:N con `movimiento_ot`. No contiene credenciales, no se relaciona con
-Supabase Auth y no equivale a `perfil_usuario`. Un responsable inactivo no puede elegirse en nuevas
+Relación N:1 con `sector` y 1:N con `movimiento_ot`. No contiene credenciales, no tiene cuenta de
+acceso y no equivale a `perfil_usuario`. Un responsable inactivo no puede elegirse en nuevas
 asignaciones, pero permanece visible en movimientos históricos. Su `sector_id` no se reasigna cuando
 ya tiene historia; se inactiva y se crea el registro apropiado si cambia su pertenencia operativa.
 
@@ -645,20 +695,25 @@ sector; cuando se anula, `anulado_en` cierra ese intervalo. Si una OT visita var
 sector, cada permanencia se calcula por separado y el total del sector puede obtenerse sumando sus
 intervalos. La duración continúa siendo derivada y `duracion_sector` no se almacena.
 
-### `auditoria_evento` y `auditoria_cambio`
+### `token_usuario`
 
-| Entidad | PK y atributos lógicos | Reglas |
-|---|---|---|
-| `auditoria_evento` | `id bigint`; `entidad_codigo text`; `registro_clave text`; `operacion text`; `actor_perfil_id integer` FK; `ocurrido_en timestamptz` | `CREATE`, `UPDATE` o `DELETE`; inmutable; no depende en cascada del registro operacional. |
-| `auditoria_cambio` | `id bigint`; `auditoria_evento_id bigint` FK; `atributo_codigo text`; `valor_anterior`; `valor_nuevo` | Un atributo una vez por evento; inmutable; permite reconstruir cambios relevantes. |
+Finalidad: representar las credenciales temporales de una cuenta: sesiones renovables, invitaciones
+y recuperaciones de contraseña. PK: `id`.
 
-En `CREATE`, el valor anterior puede ser null; en `DELETE`, el nuevo puede ser null. La
-representación física de los valores se decide posteriormente sin cambiar el modelo lógico
-evento–cambios.
+| Atributo | Tipo lógico | Nulo/default | Unicidad/FK y restricción |
+|---|---|---|---|
+| `id` | bigint | No/generado | PK; crecimiento elevado |
+| `perfil_usuario_id` | integer | No/— | FK `perfil_usuario` |
+| `tipo` | text | No/— | `SESION`, `INVITACION` o `RECUPERACION` |
+| `token_hash` | text | No/— | Único; el valor original nunca se almacena |
+| `creado_en` | timestamptz | No/generado | Momento de emisión |
+| `expira_en` | timestamptz | No/— | Posterior a `creado_en` |
+| `usado_en` | timestamptz | Sí/null | Solo `INVITACION` y `RECUPERACION`; una vez establecido, el token no vuelve a aceptarse |
+| `revocado_en` | timestamptz | Sí/null | Revocación explícita, rotación de sesión o inactivación del perfil |
 
-`movimiento_ot` no reemplaza la auditoría: es información funcional sobre recorrido, sectores,
-responsables y tiempos. La auditoría controla quién creó, modificó o eliminó datos y cuáles fueron
-los valores anteriores y nuevos. Un movimiento puede generar además un evento de auditoría.
+Un token es válido solo si no está caducado, usado ni revocado. Al renovar una sesión, el token
+anterior se revoca y se emite uno nuevo. Inactivar un perfil revoca sus tokens vigentes. Los tokens
+caducados pueden depurarse sin pérdida de información de negocio.
 
 ## CATÁLOGOS Y DOMINIOS
 
@@ -674,6 +729,8 @@ los valores anteriores y nuevos. Un movimiento puede generar además un evento d
 - `cara_color`/`cara_acabado`: `ANVERSO`, `REVERSO`, `AMBAS`.
 - `posicion`: `IZQUIERDA`, `ARRIBA` para los acabados que la requieren.
 - `SECTOR`: códigos iniciales `DISENO`, `PRENSA`, `PRE_ACABADO`, `PRODUCCION`, `ALMACEN`.
+- `TIPO_TOKEN`: `SESION`, `INVITACION`, `RECUPERACION` como códigos conceptuales estables de
+  `token_usuario`; no se crea otra entidad para ellos.
 
 ## REGLAS DEL RECORRIDO Y PERMISOS FUTUROS
 
@@ -700,9 +757,9 @@ quedan fuera de esta Spec.
   selecciona responsables; puede enviar o devolver a destinos permitidos y marcar `TERMINADO`
   cuando corresponda; no elimina OT ni administra sectores o catálogos.
 - `ADMINISTRADOR`: ve todas las OT; puede moverlas, corregir recorridos conservando historia,
-  administrar sectores y responsables, anular y eliminar OT según las reglas aprobadas.
+  administrar sectores y responsables y anular OT según las reglas aprobadas; no elimina OT.
 
-Esta sección documenta el alcance empresarial. No implementa filtros, RLS, RPC ni autorizaciones.
+Esta sección documenta el alcance empresarial. No implementa filtros, endpoints ni autorizaciones.
 La matriz exacta de destinos y el detalle de permisos pertenecen a la futura Spec funcional.
 
 ### ALMACÉN
@@ -714,7 +771,7 @@ normal de `movimiento_ot`. Esta Spec no modela movimientos OT → ALMACÉN.
 ## NORMALIZACIÓN DE NOMBRES Y 3FN
 
 `ORDEN_TRABAJO` → `orden_trabajo`; `OT_DETALLE` → `ot_detalle`; `MÁQUINA` → `maquina`;
-`Armado` → `armado`; `AUDITORIA/HISTORIAL` → `auditoria_evento` + `auditoria_cambio`.
+`Armado` → `armado`; `AUDITORIA/HISTORIAL` → atributos de trazabilidad por entidad (Enmienda 3).
 
 - Los pisos son filas, no columnas repetidas; los acabados multivaluados usan `ot_acabado`.
 - `tipo_material` y `material` son conceptos distintos; los gramajes pertenecen al material.
@@ -727,9 +784,9 @@ normal de `movimiento_ot`. Esta Spec no modela movimientos OT → ALMACÉN.
 - No existen columnas `sector_1`, `sector_2`, `responsable_1`, `responsable_2` ni equivalentes.
 - `sector_actual`, `responsable_actual` y `duracion_sector` son datos derivados del historial y no se
   duplican en `orden_trabajo`.
-- `movimiento_ot` y `auditoria_evento` permanecen separados por representar hechos empresariales y
-  hechos de control diferentes.
-- Evento y cambios de auditoría se separan por su relación 1:N.
+- La trazabilidad de creación y última modificación depende de cada registro y se almacena en él;
+  no requiere una entidad separada.
+- Los tokens se separan de `perfil_usuario` por su relación 1:N y su ciclo de vida propio.
 
 El modelo se mantiene en 3FN conceptual. Cualquier desnormalización futura exige una justificación
 de rendimiento y controles explícitos para evitar dos fuentes de verdad.
@@ -740,15 +797,15 @@ Existe una base de datos anterior con aproximadamente 19.000 OT históricas. La 
 parcial de esa información **no está confirmada** y queda como posibilidad o requisito futuro a
 evaluar; no bloquea Spec 002, Spec 003 ni el desarrollo del nuevo sistema. La referencia se conserva
 como contexto para validar capacidad y crecimiento, porque cada OT nueva también puede producir
-múltiples movimientos. Por ello `movimiento_ot`, `auditoria_evento` y `auditoria_cambio` son
-entidades de crecimiento elevado. La futura solución debe contemplar paginación, índices apropiados
+múltiples movimientos. Por ello `movimiento_ot` y `token_usuario` son entidades de crecimiento
+elevado. La futura solución debe contemplar paginación, índices apropiados
 y consultas eficientes por OT, sector y momento, pero esta Spec no define índices físicos,
 consultas, umbrales técnicos ni una migración histórica.
 
 ## DECISIONES PENDIENTES
 
 La revisión final identifica **cero decisiones estructurales bloqueantes**. Las decisiones siguientes
-no cambian las 16 entidades, sus atributos fundamentales ni sus relaciones aprobadas.
+no cambian las 15 entidades, sus atributos fundamentales ni sus relaciones aprobadas.
 
 ### DECISIONES FUNCIONALES PARA SPEC 003
 
@@ -757,7 +814,7 @@ no cambian las 16 entidades, sus atributos fundamentales ni sus relaciones aprob
 | DF-001 | Definir la matriz exacta de destinos permitidos desde cada sector. | **NO BLOQUEA SPEC 002** |
 | DF-002 | Definir las acciones disponibles y sus reglas; los botones o su presentación visual se diseñarán después. | **NO BLOQUEA SPEC 002** |
 | DF-003 | Definir si una devolución exige motivo y cómo se valida. | **NO BLOQUEA SPEC 002** |
-| DF-004 | Definir permisos técnicos y controles RLS/RPC para movimientos, visibilidad y administración. | **NO BLOQUEA SPEC 002** |
+| DF-004 | Definir permisos técnicos en el backend para movimientos, visibilidad y administración. | **NO BLOQUEA SPEC 002** |
 | DF-005 | Definir el comportamiento visual del recorrido, selección de destino y responsable. | **NO BLOQUEA SPEC 002** |
 | DF-006 | Definir si algún tipo de trabajo recomienda o restringe una ruta específica sin convertir el modelo en una secuencia rígida. | **NO BLOQUEA SPEC 002** |
 
@@ -769,20 +826,20 @@ contrato estructural aprobado por esta Spec.
 | ID | Decisión pendiente | Clasificación |
 |---|---|---|
 | DP-002 | Definir, si se automatiza, la fórmula empresarial de `total_pliegos`; hasta entonces es un entero registrado. | **NO BLOQUEA SPEC 002** |
-| DP-003 | Definir acciones referenciales físicas para eliminación operacional sin perder auditoría ni historia requerida. | **NO BLOQUEA SPEC 002** |
-| DP-004 | Definir el período de retención de la auditoría completa. | **NO BLOQUEA SPEC 002** |
-| DP-005 | Definir la representación física de `valor_anterior` y `valor_nuevo` sin cambiar el modelo evento–cambios. | **NO BLOQUEA SPEC 002** |
+| DP-009 | Definir la duración de cada tipo de token y la política de depuración de tokens caducados. | **NO BLOQUEA SPEC 002** |
 | DP-006 | Definir índices físicos, estrategia de paginación y optimización a partir de volúmenes medidos. | **NO BLOQUEA SPEC 002** |
 | DP-008 | Evaluar si corresponde migrar total o parcialmente la base anterior con aproximadamente 19.000 OT; no existe obligación de migrarla. | **NO BLOQUEA SPEC 002, SPEC 003 NI EL DESARROLLO** |
 
 La anterior `DP-007` quedó **RESUELTA** mediante la enmienda del 2026-10-06: `anulado_en` cierra el
-último intervalo productivo de una OT anulada sin persistir una duración.
+último intervalo productivo de una OT anulada sin persistir una duración. `DP-003`, `DP-004` y
+`DP-005` quedaron **RETIRADAS** por la Enmienda 3: no existe eliminación física de OT ni auditoría
+completa.
 
 ## OBSERVACIONES Y CORRECCIONES DEL MODELO
 
 | ID | Estado | Elementos | Decisión consolidada |
 |---|---|---|---|
-| OBS-001 | RESUELTA | entidades | Se incorporan `tipo_material`, `sector`, `responsable_sector` y `movimiento_ot`; el total real es 16. |
+| OBS-001 | RESUELTA | entidades | Se incorporan `tipo_material`, `sector`, `responsable_sector` y `movimiento_ot`; tras la Enmienda 3 el total es 15. |
 | OBS-002 | RESUELTA | pisos | Una OT admite 0..3 pisos; cuando existen son consecutivos desde 1. |
 | OBS-003 | RESUELTA | cantidad | `cantidad` es `integer` positivo; `cantidad_paginas` es opcional. |
 | OBS-004 | RESUELTA | material/gramaje | `tipo_material` es independiente, `gramaje` pertenece a `material` y se elimina `gramaje_id` de `ot_detalle`. |
@@ -794,8 +851,10 @@ La anterior `DP-007` quedó **RESUELTA** mediante la enmienda del 2026-10-06: `a
 | OBS-010 | RESUELTA | valores actuales/tiempos | Sector, responsable y duración son derivados de movimientos; no se duplican. |
 | OBS-011 | RESUELTA | usuario/responsable | `perfil_usuario` es actor autenticado; `responsable_sector` es persona física sin credenciales. |
 | OBS-012 | RESUELTA | ALMACÉN | Se conserva como sector empresarial fuera del flujo productivo. |
-| OBS-013 | RESUELTA | auditoría | Movimiento funcional y auditoría de control son modelos diferentes y coexistentes. |
+| OBS-013 | REEMPLAZADA | auditoría | Por la Enmienda 3 se retira la auditoría completa; queda la trazabilidad mínima por registro y `movimiento_ot` como historial funcional. |
 | OBS-014 | RESUELTA | idempotencia/anulación | `idempotencia_creacion` evita duplicados de creación y `anulado_en` cierra la última permanencia anulada; ambas son propiedades técnicas de `orden_trabajo`. |
+| OBS-015 | RESUELTA | autenticación | La cuenta de acceso reside en `perfil_usuario` con contraseña en hash; `token_usuario` gestiona sesiones, invitaciones y recuperación. |
+| OBS-016 | RESUELTA | retiro de OT | Una OT no se elimina físicamente; se anula. |
 
 ## Trazabilidad de reglas críticas
 
@@ -816,18 +875,20 @@ La anterior `DP-007` quedó **RESUELTA** mediante la enmienda del 2026-10-06: `a
 | Responsable físico separado del usuario | `responsable_sector` frente a `perfil_usuario` | Reglas operativas proporcionadas |
 | Sector y responsable actuales derivados | Último `movimiento_ot` | Regla de normalización proporcionada |
 | Tiempo por sector derivado | Diferencia de marcas de movimiento/finalización | Regla de normalización proporcionada |
-| Historial funcional y auditoría separados | `movimiento_ot` frente a entidades de auditoría | Regla de control proporcionada |
+| Trazabilidad mínima por registro | Atributos de creación y última modificación (DR-043) | Constitution X; Enmienda 3 |
+| OT nunca eliminada físicamente | Anulación con `anulado_en` (DR-037) | Enmienda 3 |
+| Credenciales solo como hash | `perfil_usuario.contrasena_hash`, `token_usuario.token_hash` | Spec 000 v1.1.0; Enmienda 3 |
 | Volumen de referencia comparable a 19.000 OT y crecimiento | Claves de historial y requisitos conceptuales de consulta; no implica migración obligatoria | Spec 001 y reglas proporcionadas |
 
 ## Fuera de alcance
 
 Esta Spec no genera tablas reales, SQL, migraciones, índices físicos, triggers, funciones, RPC, RLS,
-frontend, botones, backend, Plan, Tasks ni código. No modifica Supabase, no define subprocesos
+frontend, botones, backend, Plan, Tasks ni código. No configura el proveedor de base de datos, no define subprocesos
 internos de PRE_ACABADO o PRODUCCIÓN y no aprueba ni crea una migración de la base histórica.
 
 ## Success Criteria *(mandatory)*
 
-- **SC-001**: Las **16 entidades** propuestas tienen finalidad, clave primaria, atributos y reglas
+- **SC-001**: Las **15 entidades** propuestas tienen finalidad, clave primaria, atributos y reglas
   documentadas.
 - **SC-002**: El 100 % de las relaciones nuevas solicitadas expresa cardinalidad y conservación
   histórica.
@@ -841,10 +902,10 @@ internos de PRE_ACABADO o PRODUCCIÓN y no aprueba ni crea una migración de la 
   estado con ubicación.
 - **SC-007**: La revisión completa encuentra **cero decisiones estructurales bloqueantes** y clasifica
   las seis decisiones del flujo como funcionales para Spec 003.
-- **SC-008**: La auditoría soporta `CREATE`, `UPDATE` y `DELETE` sin depender del registro operacional
-  ni ser reemplazada por `movimiento_ot`.
+- **SC-008**: El 100 % de las entidades editables documenta los cuatro atributos de trazabilidad y
+  ninguna regla permite eliminar físicamente una OT.
 - **SC-009**: El modelo conserva las reglas aprobadas de materiales, pisos, montaje, dimensiones,
-  acabados, usuarios, estados, auditoría y eliminación enumeradas en esta Spec.
+  acabados, usuarios, estados, trazabilidad y anulación enumeradas en esta Spec.
 - **SC-010**: La revisión encuentra cero SQL, migraciones, RLS, RPC, índices físicos, Plan, Tasks o
   código de implementación.
 
@@ -863,4 +924,7 @@ internos de PRE_ACABADO o PRODUCCIÓN y no aprueba ni crea una migración de la 
 - Los tiempos se interpretan por visita al sector; los totales agrupados son resultados derivados.
 - La migración total o parcial de la base anterior es una posibilidad futura a evaluar y no bloquea
   esta Spec, Spec 003 ni el desarrollo del nuevo sistema.
-- La aprobación humana de esta Spec fue otorgada el 2026-10-06.
+- La aprobación humana de esta Spec fue otorgada el 2026-10-06; la Enmienda 3 requiere una nueva
+  aprobación humana.
+- El primer ADMINISTRADOR se crea mediante un procedimiento privilegiado de arranque; por eso su
+  `creado_por_perfil_id` puede ser null.
