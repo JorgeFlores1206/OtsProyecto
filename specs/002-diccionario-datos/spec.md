@@ -39,9 +39,9 @@
      principio X: creado por, creado en, modificado por y modificado en, en cada entidad editable.
   2. Se extienden esos atributos de trazabilidad a los maestros editables, que antes dependían de la
      auditoría completa.
-  3. `perfil_usuario` deja de enlazar una identidad de Supabase Auth: incorpora `correo`, `nombre` y
-     `contrasena_hash`, y se retira `auth_usuario_id`. Se agrega la entidad `token_usuario` para
-     sesiones, invitaciones y recuperación de contraseña.
+  3. `perfil_usuario` deja de enlazar una identidad de Supabase Auth: incorpora `correo`, `nombre`,
+     `contrasena_hash`, `intentos_fallidos` y `bloqueado_hasta`, y se retira `auth_usuario_id`. Se
+     agrega la entidad `token_usuario` para sesiones, invitaciones y recuperación de contraseña.
   4. Una OT ya no se elimina físicamente: la única forma de retirarla es la anulación.
 - **Motivo**: Constitution v1.1.0 (XVIII, backend separado) y Spec 000 v1.1.0 (autenticación
   gestionada por el backend; trazabilidad mínima sin historial de cambios). La anulación evita que
@@ -278,6 +278,11 @@ cada entidad editable conserva sus atributos de creación y última modificació
   la persona establezca su contraseña; mientras sea null no puede iniciar sesión.
 - **DR-045**: Los tokens de sesión, invitación y recuperación DEBEN almacenarse únicamente como hash,
   tener caducidad y poder revocarse; los de invitación y recuperación son de un solo uso.
+- **DR-046**: `perfil_usuario.intentos_fallidos` DEBE ser un entero mayor o igual que cero que cuenta
+  los inicios de sesión fallidos consecutivos, y `bloqueado_hasta` DEBE indicar hasta cuándo la cuenta
+  no puede iniciar sesión (null si no está bloqueada). Ambos los gestiona exclusivamente el backend y
+  NO forman parte de la trazabilidad de modificación. Las reglas funcionales (umbral, duración y
+  desbloqueo) pertenecen a Spec 003 (FR-017a).
 
 ## COMPARACIÓN CON EL MODELO EXISTENTE
 
@@ -562,7 +567,7 @@ reflejada en `orden_trabajo.modificado_por_perfil_id` y `modificado_en`.
 | Entidad | PK y atributos lógicos | Reglas |
 |---|---|---|
 | `rol` | `id integer`; `codigo text` único; `nombre text`; `estado boolean=true` | Códigos iniciales `ADMINISTRADOR` y `USUARIO`; inactivar si fue asignado. |
-| `perfil_usuario` | `id integer`; `correo text` único; `nombre text`; `contrasena_hash text` nullable; `rol_id integer` FK; `sector_id integer` FK nullable; `estado boolean=true` | Es la cuenta de acceso; la contraseña solo existe como hash (DR-028, DR-044); se conserva e inactiva si aparece en movimientos o como actor de trazabilidad. |
+| `perfil_usuario` | `id integer`; `correo text` único; `nombre text`; `contrasena_hash text` nullable; `intentos_fallidos integer=0`; `bloqueado_hasta timestamptz` nullable; `rol_id integer` FK; `sector_id integer` FK nullable; `estado boolean=true` | Es la cuenta de acceso; la contraseña solo existe como hash (DR-028, DR-044); el bloqueo por intentos fallidos se rige por DR-046; se conserva e inactiva si aparece en movimientos o como actor de trazabilidad. |
 
 Para `USUARIO`, `sector_id` es obligatorio y debe apuntar a su sector operativo. Para
 `ADMINISTRADOR`, puede ser null y no limita su alcance a un único sector. Inicialmente existe un solo
@@ -878,6 +883,7 @@ completa.
 | Trazabilidad mínima por registro | Atributos de creación y última modificación (DR-043) | Constitution X; Enmienda 3 |
 | OT nunca eliminada físicamente | Anulación con `anulado_en` (DR-037) | Enmienda 3 |
 | Credenciales solo como hash | `perfil_usuario.contrasena_hash`, `token_usuario.token_hash` | Spec 000 v1.1.0; Enmienda 3 |
+| Bloqueo por intentos fallidos | `perfil_usuario.intentos_fallidos`, `perfil_usuario.bloqueado_hasta` | Spec 003 FR-017a; Enmienda 3 |
 | Volumen de referencia comparable a 19.000 OT y crecimiento | Claves de historial y requisitos conceptuales de consulta; no implica migración obligatoria | Spec 001 y reglas proporcionadas |
 
 ## Fuera de alcance
