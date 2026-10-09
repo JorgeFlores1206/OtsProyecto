@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model rol {
+  id                         Int              @id @default(autoincrement())
+  codigo                     String           @unique
+  nombre                     String
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  creado_por                 perfil_usuario?  @relation("rol_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("rol_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  perfiles                   perfil_usuario[] @relation("perfil_rol")
+
+  @@index([creado_por_perfil_id], map: "rol_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "rol_modificado_por_idx")
+}
+
+model sector {
+  id                         Int                   @id @default(autoincrement())
+  codigo                     String                @unique
+  nombre                     String
+  orden_flujo                Int?                  @unique
+  participa_flujo            Boolean               @default(false)
+  estado                     Boolean               @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime              @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?             @db.Timestamptz(6)
+  creado_por                 perfil_usuario?       @relation("sector_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?       @relation("sector_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  perfiles                   perfil_usuario[]      @relation("perfil_sector")
+  responsables               responsable_sector[]
+  movimientos_origen         movimiento_ot[]       @relation("movimiento_sector_origen")
+  movimientos_destino        movimiento_ot[]       @relation("movimiento_sector_destino")
+
+  @@index([creado_por_perfil_id], map: "sector_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "sector_modificado_por_idx")
+}
+
+model perfil_usuario {
+  id                               Int                   @id @default(autoincrement())
+  correo                           String                @unique
+  nombre                           String
+  contrasena_hash                  String?
+  intentos_fallidos                Int                   @default(0)
+  bloqueado_hasta                  DateTime?             @db.Timestamptz(6)
+  rol_id                           Int
+  sector_id                        Int?
+  estado                           Boolean               @default(true)
+  creado_por_perfil_id             Int?
+  creado_en                        DateTime              @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id         Int?
+  modificado_en                    DateTime?             @db.Timestamptz(6)
+  rol                              rol                   @relation("perfil_rol", fields: [rol_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sector                           sector?               @relation("perfil_sector", fields: [sector_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                       perfil_usuario?       @relation("perfil_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por                   perfil_usuario?       @relation("perfil_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  perfiles_creados                 perfil_usuario[]      @relation("perfil_creado_por")
+  perfiles_modificados             perfil_usuario[]      @relation("perfil_modificado_por")
+  roles_creados                    rol[]                 @relation("rol_creado_por")
+  roles_modificados                rol[]                 @relation("rol_modificado_por")
+  sectores_creados                 sector[]              @relation("sector_creado_por")
+  sectores_modificados             sector[]              @relation("sector_modificado_por")
+  clientes_creados                 cliente[]             @relation("cliente_creado_por")
+  clientes_modificados             cliente[]             @relation("cliente_modificado_por")
+  tipos_material_creados           tipo_material[]       @relation("tipo_material_creado_por")
+  tipos_material_modificados       tipo_material[]       @relation("tipo_material_modificado_por")
+  materiales_creados               material[]            @relation("material_creado_por")
+  materiales_modificados           material[]            @relation("material_modificado_por")
+  gramajes_creados                 gramaje[]             @relation("gramaje_creado_por")
+  gramajes_modificados             gramaje[]             @relation("gramaje_modificado_por")
+  maquinas_creadas                 maquina[]             @relation("maquina_creado_por")
+  maquinas_modificadas             maquina[]             @relation("maquina_modificado_por")
+  parametros_creados               parametro[]           @relation("parametro_creado_por")
+  parametros_modificados           parametro[]           @relation("parametro_modificado_por")
+  responsables_creados             responsable_sector[] @relation("responsable_creado_por")
+  responsables_modificados         responsable_sector[] @relation("responsable_modificado_por")
+  ordenes_creadas                  orden_trabajo[]       @relation("orden_creado_por")
+  ordenes_modificadas              orden_trabajo[]       @relation("orden_modificado_por")
+  detalles_creados                 ot_detalle[]          @relation("detalle_creado_por")
+  detalles_modificados             ot_detalle[]          @relation("detalle_modificado_por")
+  acabados_creados                 ot_acabado[]          @relation("acabado_creado_por")
+  tokens                           token_usuario[]
+  movimientos_realizados           movimiento_ot[]
+
+  @@index([rol_id], map: "perfil_usuario_rol_idx")
+  @@index([sector_id], map: "perfil_usuario_sector_idx")
+  @@index([creado_por_perfil_id], map: "perfil_usuario_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "perfil_usuario_modificado_por_idx")
+}
+
+model cliente {
+  id                         Int              @id @default(autoincrement())
+  nombre                     String
+  telefono                   String?
+  correo                     String?
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  creado_por                 perfil_usuario?  @relation("cliente_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("cliente_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ordenes                    orden_trabajo[]
+
+  @@index([creado_por_perfil_id], map: "cliente_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "cliente_modificado_por_idx")
+}
+
+model tipo_material {
+  id                         Int              @id @default(autoincrement())
+  codigo                     String           @unique
+  nombre                     String
+  requiere_gramaje           Boolean
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  creado_por                 perfil_usuario?  @relation("tipo_material_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("tipo_material_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  materiales                 material[]
+
+  @@index([creado_por_perfil_id], map: "tipo_material_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "tipo_material_modificado_por_idx")
+}
+
+model material {
+  id                         Int              @id @default(autoincrement())
+  tipo_material_id           Int
+  codigo                     String           @unique
+  descripcion                String
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  tipo_material              tipo_material    @relation(fields: [tipo_material_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                 perfil_usuario?  @relation("material_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("material_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gramajes                   gramaje[]
+  detalles                   ot_detalle[]
+
+  @@index([tipo_material_id], map: "material_tipo_idx")
+  @@index([creado_por_perfil_id], map: "material_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "material_modificado_por_idx")
+}
+
+model gramaje {
+  id                         Int              @id @default(autoincrement())
+  material_id                Int
+  valor                      Decimal          @db.Decimal(12, 3)
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  material                   material         @relation(fields: [material_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                 perfil_usuario?  @relation("gramaje_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("gramaje_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([material_id, valor], map: "gramaje_material_id_valor_key")
+  @@index([creado_por_perfil_id], map: "gramaje_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "gramaje_modificado_por_idx")
+}
+
+model maquina {
+  id                         Int              @id @default(autoincrement())
+  nombre                     String           @unique
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  creado_por                 perfil_usuario?  @relation("maquina_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("maquina_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  detalles                   ot_detalle[]
+
+  @@index([creado_por_perfil_id], map: "maquina_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "maquina_modificado_por_idx")
+}
+
+model parametro {
+  id                         Int              @id @default(autoincrement())
+  grupo_codigo               String
+  valor_codigo               String
+  descripcion                String
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  creado_por                 perfil_usuario?  @relation("parametro_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("parametro_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ordenes_tipo               orden_trabajo[]  @relation("orden_tipo_trabajo")
+  ordenes_estado             orden_trabajo[]  @relation("orden_estado")
+  detalles_colorimetria      ot_detalle[]     @relation("detalle_colorimetria")
+  detalles_impresion         ot_detalle[]     @relation("detalle_impresion")
+  detalles_muestrario        ot_detalle[]     @relation("detalle_muestrario")
+  acabados                   ot_acabado[]
+
+  @@unique([grupo_codigo, valor_codigo], map: "parametro_grupo_valor_key")
+  @@index([creado_por_perfil_id], map: "parametro_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "parametro_modificado_por_idx")
+}
+
+model responsable_sector {
+  id                         Int              @id @default(autoincrement())
+  sector_id                  Int
+  nombre                     String
+  estado                     Boolean          @default(true)
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  sector                     sector           @relation(fields: [sector_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                 perfil_usuario?  @relation("responsable_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("responsable_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  movimientos                movimiento_ot[]
+
+  @@index([sector_id], map: "responsable_sector_sector_idx")
+  @@index([creado_por_perfil_id], map: "responsable_sector_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "responsable_sector_modificado_por_idx")
+}
+
+model orden_trabajo {
+  id                         Int              @id @default(autoincrement())
+  codigo_ot                  String           @unique @default(dbgenerated("(nextval('orden_trabajo_codigo_seq'::regclass))::text"))
+  cliente_id                 Int
+  fecha_ot                   DateTime         @db.Date
+  cantidad                   Int
+  tipo_trabajo_parametro_id  Int
+  cantidad_paginas           Int?
+  nombre_trabajo             String
+  estado_ot_parametro_id     Int              @default(dbgenerated("parametro_id('ESTADO_OT'::text, 'PENDIENTE'::text)"))
+  idempotencia_creacion      String           @unique @db.Uuid
+  terminado_en               DateTime?        @db.Timestamptz(6)
+  anulado_en                 DateTime?        @db.Timestamptz(6)
+  creado_por_perfil_id       Int
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  cliente                    cliente          @relation(fields: [cliente_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  tipo_trabajo               parametro        @relation("orden_tipo_trabajo", fields: [tipo_trabajo_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  estado_ot                  parametro        @relation("orden_estado", fields: [estado_ot_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                 perfil_usuario   @relation("orden_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("orden_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  detalles                   ot_detalle[]
+  acabados                   ot_acabado[]
+  movimientos                movimiento_ot[]
+
+  @@index([cliente_id], map: "orden_trabajo_cliente_idx")
+  @@index([tipo_trabajo_parametro_id], map: "orden_trabajo_tipo_idx")
+  @@index([estado_ot_parametro_id], map: "orden_trabajo_estado_idx")
+  @@index([creado_por_perfil_id], map: "orden_trabajo_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "orden_trabajo_modificado_por_idx")
+}
+
+model ot_detalle {
+  id                         Int              @id @default(autoincrement())
+  orden_trabajo_id           Int
+  numero_piso                Int              @db.SmallInt
+  material_id                Int
+  tamano_material_x          Decimal          @db.Decimal(12, 3)
+  tamano_material_y          Decimal          @db.Decimal(12, 3)
+  armado                     Int
+  formato                    Int
+  total_pliegos              Int
+  colorimetria_parametro_id  Int
+  cara_color                 String
+  impresion_parametro_id     Int
+  maquina_id                 Int
+  muestrario_parametro_id    Int
+  tamano_final_x             Decimal?         @db.Decimal(12, 3)
+  tamano_final_y             Decimal?         @db.Decimal(12, 3)
+  tamano_corte_x             Decimal?         @db.Decimal(12, 3)
+  tamano_corte_y             Decimal?         @db.Decimal(12, 3)
+  cara_acabado               String?
+  creado_por_perfil_id       Int?
+  creado_en                  DateTime         @default(now()) @db.Timestamptz(6)
+  modificado_por_perfil_id   Int?
+  modificado_en              DateTime?        @db.Timestamptz(6)
+  orden_trabajo              orden_trabajo    @relation(fields: [orden_trabajo_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  material                   material         @relation(fields: [material_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  colorimetria               parametro        @relation("detalle_colorimetria", fields: [colorimetria_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  impresion                  parametro        @relation("detalle_impresion", fields: [impresion_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  maquina                    maquina          @relation(fields: [maquina_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  muestrario                 parametro        @relation("detalle_muestrario", fields: [muestrario_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por                 perfil_usuario?  @relation("detalle_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  modificado_por             perfil_usuario?  @relation("detalle_modificado_por", fields: [modificado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([orden_trabajo_id, numero_piso], map: "ot_detalle_orden_piso_key")
+  @@index([material_id], map: "ot_detalle_material_idx")
+  @@index([colorimetria_parametro_id], map: "ot_detalle_colorimetria_idx")
+  @@index([impresion_parametro_id], map: "ot_detalle_impresion_idx")
+  @@index([maquina_id], map: "ot_detalle_maquina_idx")
+  @@index([muestrario_parametro_id], map: "ot_detalle_muestrario_idx")
+  @@index([creado_por_perfil_id], map: "ot_detalle_creado_por_idx")
+  @@index([modificado_por_perfil_id], map: "ot_detalle_modificado_por_idx")
+}
+
+model ot_acabado {
+  orden_trabajo_id       Int
+  acabado_parametro_id   Int
+  posicion               String?
+  creado_por_perfil_id   Int
+  creado_en              DateTime        @default(now()) @db.Timestamptz(6)
+  orden_trabajo          orden_trabajo   @relation(fields: [orden_trabajo_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  acabado                parametro       @relation(fields: [acabado_parametro_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creado_por             perfil_usuario  @relation("acabado_creado_por", fields: [creado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([orden_trabajo_id, acabado_parametro_id])
+  @@index([acabado_parametro_id], map: "ot_acabado_acabado_idx")
+  @@index([creado_por_perfil_id], map: "ot_acabado_creado_por_idx")
+}
+
+model token_usuario {
+  id                  BigInt          @id @default(autoincrement())
+  perfil_usuario_id   Int
+  tipo                String
+  token_hash          String          @unique
+  creado_en           DateTime        @default(now()) @db.Timestamptz(6)
+  expira_en           DateTime        @db.Timestamptz(6)
+  usado_en            DateTime?       @db.Timestamptz(6)
+  revocado_en         DateTime?       @db.Timestamptz(6)
+  perfil_usuario      perfil_usuario  @relation(fields: [perfil_usuario_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([perfil_usuario_id, tipo, expira_en], map: "token_usuario_perfil_tipo_expira_idx")
+}
+
+model movimiento_ot {
+  id                        BigInt               @id @default(autoincrement())
+  orden_trabajo_id          Int
+  sector_origen_id          Int?
+  sector_destino_id         Int
+  responsable_sector_id     Int
+  realizado_por_perfil_id   Int
+  tipo_movimiento           String
+  ocurrido_en               DateTime             @default(now()) @db.Timestamptz(6)
+  orden_trabajo             orden_trabajo        @relation(fields: [orden_trabajo_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sector_origen             sector?              @relation("movimiento_sector_origen", fields: [sector_origen_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sector_destino            sector               @relation("movimiento_sector_destino", fields: [sector_destino_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  responsable_sector        responsable_sector   @relation(fields: [responsable_sector_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  realizado_por             perfil_usuario       @relation(fields: [realizado_por_perfil_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([orden_trabajo_id, ocurrido_en, id], map: "movimiento_ot_recorrido_idx")
+  @@index([sector_origen_id], map: "movimiento_ot_origen_idx")
+  @@index([sector_destino_id], map: "movimiento_ot_destino_idx")
+  @@index([responsable_sector_id], map: "movimiento_ot_responsable_idx")
+  @@index([realizado_por_perfil_id], map: "movimiento_ot_actor_idx")
+}
